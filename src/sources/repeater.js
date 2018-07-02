@@ -1,6 +1,6 @@
 /*
 todo:
-- need test case for drain when no currently scheduled events have a stopTime yet
+- need test case for request when no currently scheduled events have a stopTime yet
 - may need to make scheduleAhead run async in certain cases
 */
 
@@ -25,7 +25,7 @@ export default function repeater(controller, {
 	let releaseTime = Infinity;
 
 	return {
-		drain(untilTime) {
+		request(untilTime) {
 			const past = context.currentTime - latestStartTime;
 			const skipIntervals = Math.max(1, Math.ceil(past / interval));
 
@@ -53,10 +53,11 @@ export default function repeater(controller, {
 				if (sourceInstance.stop) {
 					sourceInstance.stop(stopTime);
 				}
-				const eventId = sourceInstance.drain(untilTime);
+				const event = sourceInstance.request(untilTime);
 
-				if (eventId) {
-					sources.set(eventId, {
+				if (event) {
+					const id = controller.submit(event);
+					sources.set(id, {
 						startTime,
 						releaseTime,
 						stopTime,
@@ -64,7 +65,7 @@ export default function repeater(controller, {
 					});
 					// console.log('submitted', startTime, stopTime, stopTime - startTime);
 					submitted.push(sourceInstance);
-					return eventId;
+					return id;
 				}
 			}
 			return 0;

@@ -1,6 +1,7 @@
 export default function audioNode(controller, node) {
 	let started = false;
 	let eventId = 0;
+	let submitted = false;
 	let startTime = Infinity;
 	let stopTime = Infinity;
 
@@ -19,6 +20,7 @@ export default function audioNode(controller, node) {
 	}
 
 	function stopEvent({ stopTime }) {
+		submitted = false;
 		if (started) {
 			// console.log('stopping at', stopTime, 'now is', controller.context.currentTime);
 			node.stop(stopTime);
@@ -26,18 +28,19 @@ export default function audioNode(controller, node) {
 	}
 
 	return {
-		drain(untilTime) {
-			if (untilTime >= startTime && !eventId) {
-				eventId = controller.submit({
+		request(untilTime) {
+			if (untilTime >= startTime && !submitted) {
+				submitted = true;
+				return {
 					startTime,
 					stopTime
-				});
-				return eventId;
+				};
 			}
-			return 0;
+			return null;
 		},
 		startEvent(sound, offset) {
 			const { startTime, stopTime } = sound;
+			eventId = sound.id;
 			started = true;
 			node.onended = ended;
 			node.start(startTime, offset || 0);
@@ -59,6 +62,7 @@ export default function audioNode(controller, node) {
 		// release: stop,
 		stop,
 		finishEvent() {
+			submitted = false;
 			eventId = 0;
 		}
 	};

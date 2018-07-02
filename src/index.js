@@ -128,27 +128,28 @@ function SoundQ(options = {}) {
 
 		const urgentTime = context.currentTime + MIN_LOOK_AHEAD;
 		liveShots.forEach(source => {
-			if (source.drain) {
-				// todo: get an object and submit it
-				let eventId = 0;
+			if (source.request) {
+				let event = null;
 				do {
-					eventId = source.drain(urgentTime);
-				} while (eventId);
+					event = source.request(urgentTime);
+					if (event && typeof event === 'object') {
+						source.controller.submit(event);
+					}
+				} while (event);
 			}
 		});
 
 
 		liveShots.forEach(source => {
-			if (source.drain) {
-				// todo: get an object and submit it
-				let eventId = 0;
+			if (source.request) {
+				let event = null;
 				do {
-					eventId = source.drain(earliestStopTime + MIN_LOOK_AHEAD);
-					if (eventId) {
-						const sound = soundEvents.get(eventId);
-						earliestStopTime = Math.min(earliestStopTime, sound.stopTime);
+					event = source.request(earliestStopTime + MIN_LOOK_AHEAD);
+					if (event && typeof event === 'object') {
+						source.controller.submit(event);
+						earliestStopTime = Math.min(earliestStopTime, event.stopTime);
 					}
-				} while (eventId);
+				} while (event);
 			}
 		});
 		/*
@@ -280,7 +281,6 @@ function SoundQ(options = {}) {
 				const soundEvent = soundEvents.get(id) || {
 					id,
 					shot,
-					// controller,
 					output: null,
 					stopped: false,
 					scheduled: false,
@@ -321,6 +321,7 @@ function SoundQ(options = {}) {
 		};
 
 		shot = Object.assign(definition(controller, options), {
+			controller,
 			active: false,
 			events: new Set(),
 			pool

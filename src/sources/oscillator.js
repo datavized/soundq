@@ -10,7 +10,7 @@ export default function oscillator(controller) {
 	let output = null;
 	let nodeSource = null;
 
-	let eventId = 0;
+	let submitted = false;
 	let startTime = Infinity;
 	let stopTime = Infinity;
 
@@ -22,25 +22,26 @@ export default function oscillator(controller) {
 	}
 
 	function stopEvent(event) {
-		eventId = 0;
+		submitted = false;
 		if (nodeSource) {
 			nodeSource.stopEvent(event);
 		}
 	}
 
 	return {
-		drain(untilTime) {
-			if (untilTime >= startTime && !eventId) {
+		request(untilTime) {
+			if (untilTime >= startTime && !submitted) {
 				// create oscillator and start nodeSource
 				output = context.createOscillator();
 				nodeSource = audioNodeSource(controller, output);
 				nodeSource.start(startTime);
 				nodeSource.stop(stopTime);
 
-				eventId = nodeSource.drain(untilTime);
-				return eventId;
+				submitted = true;
+
+				return nodeSource.request(untilTime);
 			}
-			return 0;
+			return null;
 		},
 		startEvent(sound) {
 			const { startTime } = sound;
@@ -55,7 +56,7 @@ export default function oscillator(controller) {
 		},
 		stop,
 		finishEvent(soundEvent) {
-			eventId = 0;
+			submitted = false;
 			if (nodeSource) {
 				nodeSource.finishEvent(soundEvent);
 			}

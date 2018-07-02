@@ -22,7 +22,7 @@ Sink/Q
 - start events in audio context
   - set up any resources (source nodes, patches)
   - call start on source nodes (or source plugin)
-- ask source for more events as needed `drain`
+- ask source for more events as needed `request`
   - indicate next scheduled time
 - tell source we're done playing all submitted events `finish`
 

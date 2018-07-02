@@ -10,7 +10,7 @@ export default function bufferSource(controller, options) {
 	let bufferSourceNode = null;
 	let nodeSource = null;
 
-	let eventId = 0;
+	let submitted = false;
 	let startTime = Infinity;
 	let stopTime = Infinity;
 
@@ -22,26 +22,27 @@ export default function bufferSource(controller, options) {
 	}
 
 	function stopEvent(event) {
-		eventId = 0;
+		submitted = false;
 		if (nodeSource) {
 			nodeSource.stopEvent(event);
 		}
 	}
 
 	return {
-		drain(untilTime) {
-			if (untilTime >= startTime && !eventId) {
+		request(untilTime) {
+			if (untilTime >= startTime && !submitted) {
 				// create bufferSourceNode and start nodeSource
 				bufferSourceNode = context.createBufferSource();
 				nodeSource = audioNodeSource(controller, bufferSourceNode);
 				nodeSource.start(startTime);
 				nodeSource.stop(stopTime);
 
-				eventId = nodeSource.drain(untilTime);
-				return eventId;
+				submitted = true;
+
+				return nodeSource.request(untilTime);
 			}
 
-			return 0;
+			return null;
 		},
 		startEvent(sound) {
 			bufferSourceNode.buffer = buffer;
@@ -54,7 +55,7 @@ export default function bufferSource(controller, options) {
 		},
 		stop,
 		finishEvent(soundEvent) {
-			eventId = 0;
+			submitted = false;
 			if (nodeSource) {
 				nodeSource.finishEvent(soundEvent);
 			}
