@@ -1,6 +1,6 @@
 /*
 todo:
-- need test case for drain when no currently scheduled events have an endTime yet
+- need test case for drain when no currently scheduled events have a stopTime yet
 - may need to make scheduleAhead run async in certain cases
 */
 
@@ -26,15 +26,18 @@ export default function repeater(controller, {
 
 	return {
 		drain(untilTime) {
-			const past = Math.min(context.currentTime - latestStartTime);
-			const skipIntervals = Math.ceil(past / interval);
-			latestStartTime += skipIntervals * interval;
+			const past = Math.max(context.currentTime - latestStartTime, 0);
+			const skipIntervals = Math.max(1, Math.ceil(past / interval));
 
 			// todo: submit a single event?
 			// todo: maxTime should account for duration
-			for (let startTime = latestStartTime, maxTime = Math.min(untilTime, releaseTime); startTime < maxTime; startTime += interval) {
+			const startTime = latestStartTime + skipIntervals * interval;
+			const maxTime = Math.min(untilTime, releaseTime);
+			if (startTime < maxTime && skipIntervals > 0) {
 
-				// each event has start, release (Infinity?) and end(Infinity?) times
+				latestStartTime = startTime;
+
+				// each event has start, release (Infinity?) and stop(Infinity?) times
 				// todo: get release from options?
 				// todo: use a function to compute options passed to each event
 				const stopTime = startTime + duration;
@@ -44,46 +47,50 @@ export default function repeater(controller, {
 					pool.pop() :
 					source(controller, options);
 
-				const eventId = sourceInstance.start(startTime);
+				sourceInstance.start(startTime);
 				if (sourceInstance.release) {
 					sourceInstance.release(releaseTime);
 				}
 				if (sourceInstance.stop) {
 					sourceInstance.stop(stopTime);
 				}
+				const eventId = sourceInstance.drain(untilTime);
 
-				sources.set(eventId, {
-					startTime,
-					releaseTime,
-					stopTime,
-					source: sourceInstance
-				});
-				submitted.push(sourceInstance);
-
-				break;
+				if (eventId) {
+					sources.set(eventId, {
+						startTime,
+						releaseTime,
+						stopTime,
+						source: sourceInstance
+					});
+					// console.log('submitted', startTime, stopTime, stopTime - startTime);
+					submitted.push(sourceInstance);
+					return eventId;
+				}
 			}
+			return 0;
 		},
 		// cancel(event) {},
 		startEvent(soundEvent) {
-			const sourceInstance = sources.get(event.id);
+			const sourceInstance = sources.get(soundEvent.id);
 			if (sourceInstance && sourceInstance.source.startEvent) {
 				return sourceInstance.source.startEvent(soundEvent, startOptions);
 			}
 			return null;
 		},
 		stopEvent(soundEvent) {
-			const sourceInstance = sources.get(event.id);
+			const sourceInstance = sources.get(soundEvent.id);
 			if (sourceInstance && sourceInstance.source.stopEvent) {
 				sourceInstance.source.stopEvent(soundEvent);
 			}
 		},
 		finishEvent(soundEvent) {
-			const sourceInstance = sources.get(event.id);
+			const sourceInstance = sources.get(soundEvent.id);
 			if (sourceInstance) {
 				if (sourceInstance.source.finishEvent) {
 					sourceInstance.source.finishEvent(soundEvent);
 				}
-				sources.delete(event.id);
+				sources.delete(soundEvent.id);
 				pool.push(sourceInstance.source);
 			}
 		},
@@ -106,7 +113,7 @@ export default function repeater(controller, {
 			});
 		},
 		stop(time) {
-			// todo: revoke anything that hasn't ended
+			// todo: revoke anything that hasn't stopped
 			// todo: stop anything that has started but hasn't stopped
 			sources.forEach(sourceInstance => {
 				if (sourceInstance.stopTime > time) {

@@ -22,6 +22,7 @@ export default function oscillator(controller) {
 	}
 
 	function stopEvent(event) {
+		eventId = 0;
 		if (nodeSource) {
 			nodeSource.stopEvent(event);
 		}
@@ -29,7 +30,7 @@ export default function oscillator(controller) {
 
 	return {
 		drain(untilTime) {
-			if (untilTime >= startTime) {
+			if (untilTime >= startTime && !eventId) {
 				// create oscillator and start nodeSource
 				output = context.createOscillator();
 				nodeSource = audioNodeSource(controller, output);
@@ -37,8 +38,9 @@ export default function oscillator(controller) {
 				nodeSource.stop(stopTime);
 
 				eventId = nodeSource.drain(untilTime);
+				return eventId;
 			}
-			return eventId;
+			return 0;
 		},
 		startEvent(sound) {
 			const { startTime } = sound;
@@ -48,10 +50,15 @@ export default function oscillator(controller) {
 		stopEvent,
 		start(time, options = {}) {
 			startTime = time;
+			stopTime = Infinity;
 			frequency = options.frequency || 440;
 		},
 		stop,
-		finishEvent() {
+		finishEvent(soundEvent) {
+			eventId = 0;
+			if (nodeSource) {
+				nodeSource.finishEvent(soundEvent);
+			}
 			nodeSource = null;
 		}
 	};

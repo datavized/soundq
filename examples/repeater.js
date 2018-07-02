@@ -20,7 +20,7 @@ getAudioBuffer(audioFile).then(buffer => {
 	const source = soundQ.source(repeater, {
 		source: bufferSource,
 		options: buffer,
-		interval: 0.01,
+		interval: 0.2,
 		duration: 1
 	});
 	const shot = soundQ.shot(source);

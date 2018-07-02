@@ -31,7 +31,7 @@ getAudioBuffer(audioFile).then(buffer => {
 
 	// button.addEventListener('click', () => {
 	// 	console.log('playing');
-	// 	id = shot.start(soundQ.context.currentTime);
+	// 	const id = shot.start(soundQ.context.currentTime);
 	// 	shot.stop(soundQ.context.currentTime + 2, id);
 	// });
 });

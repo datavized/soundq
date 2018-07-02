@@ -29,7 +29,8 @@ button.addEventListener('click', () => {
 	// for (let i = 0; i < 5; i++) {
 	// 	const start = 500 + i * 2;
 	// 	const end = start + 0.5;
-	// 	shot.start(soundQ.context.currentTime + start).stop(soundQ.context.currentTime + end);
+	// 	const id = shot.start(soundQ.context.currentTime + start);
+	// 	shot.stop(soundQ.context.currentTime + end, id);
 	// }
 	const id = shot.start(soundQ.context.currentTime, { frequency: 440 + Math.random() * 200 });
 	shot.stop(soundQ.context.currentTime + 1, id);

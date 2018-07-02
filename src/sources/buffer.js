@@ -22,6 +22,7 @@ export default function bufferSource(controller, options) {
 	}
 
 	function stopEvent(event) {
+		eventId = 0;
 		if (nodeSource) {
 			nodeSource.stopEvent(event);
 		}
@@ -29,7 +30,7 @@ export default function bufferSource(controller, options) {
 
 	return {
 		drain(untilTime) {
-			if (untilTime >= startTime) {
+			if (untilTime >= startTime && !eventId) {
 				// create bufferSourceNode and start nodeSource
 				bufferSourceNode = context.createBufferSource();
 				nodeSource = audioNodeSource(controller, bufferSourceNode);
@@ -37,8 +38,10 @@ export default function bufferSource(controller, options) {
 				nodeSource.stop(stopTime);
 
 				eventId = nodeSource.drain(untilTime);
+				return eventId;
 			}
-			return eventId;
+
+			return 0;
 		},
 		startEvent(sound) {
 			bufferSourceNode.buffer = buffer;
@@ -47,9 +50,14 @@ export default function bufferSource(controller, options) {
 		stopEvent,
 		start(time) {
 			startTime = time;
+			stopTime = Infinity;
 		},
 		stop,
-		finishEvent() {
+		finishEvent(soundEvent) {
+			eventId = 0;
+			if (nodeSource) {
+				nodeSource.finishEvent(soundEvent);
+			}
 			nodeSource = null;
 		}
 	};

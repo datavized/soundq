@@ -95,7 +95,6 @@ function SoundQ(options = {}) {
 	const playedSounds = [];
 
 	let scheduling = false;
-	let nextScheduleTime = Infinity;
 	let earliestStopTime = Infinity;
 	let nextShotId = 1;
 
@@ -109,8 +108,6 @@ function SoundQ(options = {}) {
 		if (sound.output && sound.output.connect) {
 			sound.output.connect(context.destination);
 		}
-
-		nextScheduleTime = Math.min(nextScheduleTime, sound.stopTime);
 
 		const needsSorting = playedSounds.length && sound.startTime <= playedSounds[0].startTime;
 		playedSounds.push(sound);
@@ -128,15 +125,32 @@ function SoundQ(options = {}) {
 		}
 
 		scheduling = true;
-		nextScheduleTime = Math.max(nextScheduleTime, context.currentTime + MIN_LOOK_AHEAD);
 
-		// todo: loop this over and over until we have enough to take use through earliest stopTime?
+		const urgentTime = context.currentTime + MIN_LOOK_AHEAD;
 		activeShots.forEach(source => {
 			if (source.drain) {
-				source.drain(nextScheduleTime);
+				// todo: get an object and submit it
+				let eventId = 0;
+				do {
+					eventId = source.drain(urgentTime);
+				} while (eventId);
 			}
 		});
 
+
+		activeShots.forEach(source => {
+			if (source.drain) {
+				// todo: get an object and submit it
+				let eventId = 0;
+				do {
+					eventId = source.drain(earliestStopTime + MIN_LOOK_AHEAD);
+					if (eventId) {
+						const sound = soundEvents.get(eventId);
+						earliestStopTime = Math.min(earliestStopTime, sound.stopTime);
+					}
+				} while (eventId);
+			}
+		});
 		/*
 		todo: loop through any started sound events
 		- fade out anything that's been playing a long time if we're over the limit
@@ -149,34 +163,26 @@ function SoundQ(options = {}) {
 
 		/*
 		todo: loop through submitted sound events
-		- find new nextScheduleTime
 		- cancel anything that's too far out
 		- this queue is sorted by start time
 		  - so we can end early
 		  - efficiently store earliest stopTime
 		  - probably faster to use binary insert
 		*/
-		nextScheduleTime = Infinity;
-		for (let i = 0, n = unscheduledQueue.length; i < n && playedSounds.length < MAX_SCHEDULED_SOUNDS; i++) {
-			const sound = unscheduledQueue[i];
+		while (unscheduledQueue.length && playedSounds.length < MAX_SCHEDULED_SOUNDS) {
+			const sound = unscheduledQueue.shift();
 
 			/*
 			todo:
 			note that the time between NOW and startTime should be less than min latency...
 			Use the time between the FIRST stopTime of scheduled sound and startTime.
 			*/
-			if (playedSounds.length < 3 || sound.startTime - context.currentTime < MIN_LOOK_AHEAD) {
-				unscheduledQueue.splice(i, 1);
-				i--;
-				n--;
-
-				if (sound.stopTime > context.currentTime) {
-					startSoundEvent(sound);
-				} else {
-					// we missed one!
-					// todo: make this do something!
-					revoke(sound.id);
-				}
+			if (sound.stopTime > context.currentTime) {
+				startSoundEvent(sound);
+			} else {
+				// we missed one!
+				// todo: make this do something! we're probably leaking memory here
+				revoke(sound.id);
 			}
 		}
 
@@ -188,6 +194,17 @@ function SoundQ(options = {}) {
 	*/
 	function scheduleShots() {
 		scheduleSounds();
+	}
+
+	function calculateEarliestStopTime() {
+		earliestStopTime = Infinity;
+		for (let i = 0; i < playedSounds.length; i++) {
+			const st = playedSounds[i].stopTime;
+			if (st > context.currentTime) {
+				earliestStopTime = st;
+				break;
+			}
+		}
 	}
 
 	function revoke(eventId) {
@@ -204,23 +221,27 @@ function SoundQ(options = {}) {
 				shot.finishEvent(sound);
 			}
 
+			calculateEarliestStopTime();
+
 			soundEvents.delete(eventId);
 			shot.events.delete(sound);
 			// todo: fire stop event
 
 			if (!shot.events.size && !shot.active) {
+				// we may want to give the source a `reset` method here
+				// to make sure it's clean before going back in the pool
 				liveShots.delete(shot);
 				shot.pool.push(shot);
 			}
 
-			if (/*context.currentTime < sound.stopTime &&*/ sound.startTime < context.currentTime) {
+			if (sound.startTime < context.currentTime) {
 				// only schedule further if this sound has actually played
 				scheduleShots();
 			}
 		}
 	}
 
-	function end(id, stopTime) {
+	function stop(id, stopTime) {
 		const sound = soundEvents.get(id);
 		if (id && sound.stopTime !== stopTime) {
 			sound.stopTime = stopTime;
@@ -230,14 +251,7 @@ function SoundQ(options = {}) {
 				// re-sort played sounds, update earliest stopTime if needed
 				playedSounds.sort(sortPlayed);
 
-				earliestStopTime = Infinity;
-				for (let i = 0; i < playedSounds.length; i++) {
-					const st = playedSounds[i].stopTime;
-					if (st > context.currentTime) {
-						earliestStopTime = st;
-						break;
-					}
-				}
+				calculateEarliestStopTime();
 
 			}
 			scheduleShots();
@@ -283,6 +297,12 @@ function SoundQ(options = {}) {
 					}
 					soundEvents.set(id, soundEvent);
 					shot.events.add(soundEvent);
+
+					if (soundEvent.stopTime >= context.currentTime) {
+						earliestStopTime = Math.min(earliestStopTime, soundEvent.stopTime);
+					}
+				} else {
+					console.warn('double submit on event', soundEvent);
 				}
 
 				// todo: allow updating of already played event
@@ -295,7 +315,7 @@ function SoundQ(options = {}) {
 			revoke,
 
 			// clean up
-			end
+			stop
 		};
 
 		shot = Object.assign(definition(controller, options), {
