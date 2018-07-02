@@ -41,7 +41,7 @@ export default function audioNode(controller, node) {
 			started = true;
 			node.onended = ended;
 			node.start(startTime, offset || 0);
-			console.log('started node', startTime);
+			// console.log('started node', startTime);
 
 			if (stopTime < Infinity) {
 				stopEvent(sound);

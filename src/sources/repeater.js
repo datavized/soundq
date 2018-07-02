@@ -115,6 +115,7 @@ export default function repeater(controller, {
 		stop(time) {
 			// todo: revoke anything that hasn't stopped
 			// todo: stop anything that has started but hasn't stopped
+			releaseTime = time;
 			sources.forEach(sourceInstance => {
 				if (sourceInstance.stopTime > time) {
 					sourceInstance.source.stop(time);

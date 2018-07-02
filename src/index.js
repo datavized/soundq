@@ -127,7 +127,7 @@ function SoundQ(options = {}) {
 		scheduling = true;
 
 		const urgentTime = context.currentTime + MIN_LOOK_AHEAD;
-		activeShots.forEach(source => {
+		liveShots.forEach(source => {
 			if (source.drain) {
 				// todo: get an object and submit it
 				let eventId = 0;
@@ -138,7 +138,7 @@ function SoundQ(options = {}) {
 		});
 
 
-		activeShots.forEach(source => {
+		liveShots.forEach(source => {
 			if (source.drain) {
 				// todo: get an object and submit it
 				let eventId = 0;
@@ -245,8 +245,10 @@ function SoundQ(options = {}) {
 		const sound = soundEvents.get(id);
 		if (id && sound.stopTime !== stopTime) {
 			sound.stopTime = stopTime;
-			if (sound.scheduled && sound.shot.stopEvent) {
-				sound.shot.stopEvent(sound);
+			if (sound.scheduled) {
+				if (sound.shot.stopEvent) {
+					sound.shot.stopEvent(sound);
+				}
 
 				// re-sort played sounds, update earliest stopTime if needed
 				playedSounds.sort(sortPlayed);

@@ -27,10 +27,10 @@ button.disabled = false;
 button.addEventListener('click', () => {
 	console.log('playing');
 	// for (let i = 0; i < 5; i++) {
-	// 	const start = 500 + i * 2;
-	// 	const end = start + 0.5;
+	// 	const start = 0 + i * 2;
+	// 	const stop = start + 0.5;
 	// 	const id = shot.start(soundQ.context.currentTime + start);
-	// 	shot.stop(soundQ.context.currentTime + end, id);
+	// 	shot.stop(soundQ.context.currentTime + stop, id);
 	// }
 	const id = shot.start(soundQ.context.currentTime, { frequency: 440 + Math.random() * 200 });
 	shot.stop(soundQ.context.currentTime + 1, id);
