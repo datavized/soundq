@@ -115,9 +115,9 @@ export default function repeater(controller, {
 			});
 			startOptions = undefined;
 		},
-		finish(time) {
-			// todo: clean anything out of pending queue that ends before this time
-		},
+		// finish(/time) {
+		// 	// todo: clean anything out of pending queue that ends before this time
+		// },
 		destroy() {}
 	};
 }

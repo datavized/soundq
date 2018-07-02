@@ -3,6 +3,13 @@ import allOff from 'event-emitter/all-off';
 import createAudioContext from 'ios-safe-audio-context';
 // import MultiMap from './util/MultiMap';
 
+/*
+definitions:
+- "active" shots have been started but not yet stopped
+- "live" shots have been started and possibly stopped or
+  not, but still have some live/pending sound events in the queue
+*/
+
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
 // const MIN_LATENCY = 0.05;
@@ -75,12 +82,14 @@ function SoundQ(options = {}) {
 	const context = options.context || getMainContext(this);
 
 	// todo: get pool limits from options
+	// todo: periodically empty out old instances from source pools
 
 	// queues, maps and sets for various pools and events
 	const allSources = new Map();
 	const allShots = new Set();
-	const liveShots = new Map(); // by id
-	const backloggedShots = [];
+	const activeShots = new Map(); // by id
+	const liveShots = new Set();
+	// const backloggedShots = [];
 	const soundEvents = new Map();
 	const unscheduledQueue = [];
 	const playedSounds = [];
@@ -121,8 +130,8 @@ function SoundQ(options = {}) {
 		scheduling = true;
 		nextScheduleTime = Math.max(nextScheduleTime, context.currentTime + MIN_LOOK_AHEAD);
 
-		// todo: loop this over and over until we have enough to take use through earliest endTime?
-		liveShots.forEach(source => {
+		// todo: loop this over and over until we have enough to take use through earliest stopTime?
+		activeShots.forEach(source => {
 			if (source.drain) {
 				source.drain(nextScheduleTime);
 			}
@@ -132,7 +141,7 @@ function SoundQ(options = {}) {
 		todo: loop through any started sound events
 		- fade out anything that's been playing a long time if we're over the limit
 		- cancel anything that's too far out
-		- this queue is sorted by end time
+		- this queue is sorted by stop time
 		*/
 		// for (let i = 0, n = playedSounds.length; i < n; i++) {
 		// 	const sound = playedSounds[i];
@@ -184,17 +193,25 @@ function SoundQ(options = {}) {
 	function revoke(eventId) {
 		const index = playedSounds.findIndex(s => s.id === eventId);
 		if (index >= 0) {
+
 			const sound = playedSounds[index];
+			const shot = sound.shot;
 			sound.stopped = true;
 
 			playedSounds.splice(index, 1);
 
-			if (sound.shot.finishEvent) {
-				sound.shot.finishEvent(sound);
+			if (shot.finishEvent) {
+				shot.finishEvent(sound);
 			}
 
 			soundEvents.delete(eventId);
+			shot.events.delete(sound);
 			// todo: fire stop event
+
+			if (!shot.events.size && !shot.active) {
+				liveShots.delete(shot);
+				shot.pool.push(shot);
+			}
 
 			if (/*context.currentTime < sound.stopTime &&*/ sound.startTime < context.currentTime) {
 				// only schedule further if this sound has actually played
@@ -232,12 +249,13 @@ function SoundQ(options = {}) {
 	function makeSourceShot(sourceDef) {
 		const {
 			definition,
-			options
+			options,
+			pool
 		} = sourceDef;
 
 		let shot = null;
 
-		const sourceController = {
+		const controller = {
 			context,
 
 			// todo: move functions up to top level if possible
@@ -246,7 +264,9 @@ function SoundQ(options = {}) {
 				const soundEvent = soundEvents.get(id) || {
 					id,
 					shot,
+					// controller,
 					output: null,
+					stopped: false,
 					scheduled: false,
 					releaseTime: Infinity,
 					stopTime: Infinity
@@ -262,6 +282,7 @@ function SoundQ(options = {}) {
 						unscheduledQueue.sort(sortUnscheduled);
 					}
 					soundEvents.set(id, soundEvent);
+					shot.events.add(soundEvent);
 				}
 
 				// todo: allow updating of already played event
@@ -277,18 +298,22 @@ function SoundQ(options = {}) {
 			end
 		};
 
-		shot = definition(sourceController, options);
-		shot.stopped = false;
+		shot = Object.assign(definition(controller, options), {
+			active: false,
+			events: new Set(),
+			pool
+		});
 
 		return shot;
 	}
 
 	function startSourceShot(shot, time = context.currentTime, options) {
-		// todo: what if we're already started?
+		// todo: what if we're already active?
 		if (shot.start) {
 			shot.start(time, options);
 		}
 		// todo: set release, stopTime to Infinity
+
 		scheduleShots();
 	}
 
@@ -311,8 +336,8 @@ function SoundQ(options = {}) {
 		scheduleShots();
 	}
 
-	function destroySourceShot() {
-	}
+	// function destroySourceShot(shot) {
+	// }
 
 	/*
 	todo: can we eliminate this?
@@ -334,7 +359,7 @@ function SoundQ(options = {}) {
 	- add events to shot
 	- find out and report if shot is reusable
 	*/
-	this.shot = (source, patch) => {
+	this.shot = (source/*, patch*/) => {
 		// todo: if source is a buffer, create a new source for it
 		// todo: if source is an AudioScheduledSourceNode, create new source for it?
 		// todo: shuffle around order so code makes sense
@@ -372,21 +397,24 @@ function SoundQ(options = {}) {
 
 				// todo: set up patch from pool w/ options
 
-				liveShots.set(id, shotPrivate);
+				shotPrivate.active = true;
+				liveShots.add(shotPrivate);
+				activeShots.set(id, shotPrivate);
 				startSourceShot(shotPrivate, startTime, options);
 				return id;
 			},
 			release(releaseTime, id) {
 				// todo: handle missing id for this shot def
-				const shotPrivate = liveShots.get(id);
+				const shotPrivate = activeShots.get(id);
 				if (shotPrivate) {
 					releaseSourceShot(shotPrivate, releaseTime);
 				}
 			},
 			stop(stopTime, id) {
 				// todo: handle missing id for this shot def
-				const shotPrivate = liveShots.get(id);
-				liveShots.delete(id);
+				const shotPrivate = activeShots.get(id);
+				shotPrivate.active = false;
+				activeShots.delete(id);
 				if (shotPrivate) {
 					stopSourceShot(shotPrivate, stopTime);
 				}
