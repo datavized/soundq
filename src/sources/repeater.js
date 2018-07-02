@@ -26,10 +26,9 @@ export default function repeater(controller, {
 
 	return {
 		drain(untilTime) {
-			const past = Math.max(context.currentTime - latestStartTime, 0);
+			const past = context.currentTime - latestStartTime;
 			const skipIntervals = Math.max(1, Math.ceil(past / interval));
 
-			// todo: submit a single event?
 			// todo: maxTime should account for duration
 			const startTime = latestStartTime + skipIntervals * interval;
 			const maxTime = Math.min(untilTime, releaseTime);
@@ -101,6 +100,7 @@ export default function repeater(controller, {
 			// todo: stack options up, since they may change?
 			startOptions = opts;
 			latestStartTime = startTime - interval;
+			releaseTime = Infinity;
 		},
 		release(time) {
 			releaseTime = time;
