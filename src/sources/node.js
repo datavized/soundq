@@ -1,6 +1,7 @@
 export default function audioNode(controller, node) {
 	let started = false;
 	let eventId = 0;
+	let startTime = Infinity;
 
 	function stop(stopTime) {
 		if (eventId && stopTime < Infinity) {
@@ -23,6 +24,14 @@ export default function audioNode(controller, node) {
 	}
 
 	return {
+		drain(untilTime) {
+			if (untilTime >= startTime) {
+				eventId = controller.submit({
+					startTime
+				});
+			}
+			return eventId;
+		},
 		startEvent(sound, offset) {
 			const { startTime, stopTime } = sound;
 			started = true;
@@ -38,15 +47,8 @@ export default function audioNode(controller, node) {
 			};
 		},
 		stopEvent,
-		start(startTime) {
-			// start this whole thing
-			// we don't need to queue up events, so just submit one right away
-			// we'll let the controller manage the queue for us
-
-			// todo: don't submit until drained!
-			eventId = controller.submit({
-				startTime
-			});
+		start(time) {
+			startTime = time;
 		},
 		// release: stop,
 		stop

@@ -10,7 +10,12 @@ export default function bufferSource(controller, options) {
 	let bufferSourceNode = null;
 	let nodeSource = null;
 
-	function stop(stopTime) {
+	let eventId = 0;
+	let startTime = Infinity;
+	let stopTime = Infinity;
+
+	function stop(time) {
+		stopTime = time;
 		if (nodeSource) {
 			nodeSource.stop(stopTime);
 		}
@@ -23,18 +28,25 @@ export default function bufferSource(controller, options) {
 	}
 
 	return {
-		// todo: implement drain
+		drain(untilTime) {
+			if (untilTime >= startTime) {
+				// create bufferSourceNode and start nodeSource
+				bufferSourceNode = context.createBufferSource();
+				nodeSource = audioNodeSource(controller, bufferSourceNode);
+				nodeSource.start(startTime);
+				nodeSource.stop(stopTime);
+
+				eventId = nodeSource.drain(untilTime);
+			}
+			return eventId;
+		},
 		startEvent(sound) {
 			bufferSourceNode.buffer = buffer;
 			return nodeSource.startEvent(sound, offset);
 		},
 		stopEvent,
-		start(startTime) {
-			// todo: don't make buffer until we need it?
-			// create bufferSourceNode and start nodeSource in drain
-			bufferSourceNode = context.createBufferSource();
-			nodeSource = audioNodeSource(controller, bufferSourceNode);
-			return nodeSource.start(startTime);
+		start(time) {
+			startTime = time;
 		},
 		stop,
 		finishEvent() {
