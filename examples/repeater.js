@@ -5,7 +5,7 @@ import repeater from '../src/sources/repeater';
 document.body.insertAdjacentHTML('beforeend', require('./repeater.html'));
 
 const soundQ = new SoundQ({
-	// maxLiveSounds: 20
+	cacheExpiration: 2
 });
 
 function getAudioBuffer(url) {

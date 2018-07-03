@@ -15,8 +15,10 @@ export default function repeater(controller, {
 
 	// it's up to us to retain any reusable resources
 	const pool = [];
-	const submitted = [];
-	// const started = [];
+
+	// todo: we'll use this to revoke events if interval changes
+	const submitted = new Set();
+
 	const sources = new Map();
 	const { context } = controller;
 
@@ -64,7 +66,7 @@ export default function repeater(controller, {
 						source: sourceInstance
 					});
 					// console.log('submitted', startTime, stopTime, stopTime - startTime);
-					submitted.push(sourceInstance);
+					submitted.add(sourceInstance);
 					return id;
 				}
 			}
@@ -92,6 +94,7 @@ export default function repeater(controller, {
 				}
 				sources.delete(soundEvent.id);
 				pool.push(sourceInstance.source);
+				submitted.delete(sourceInstance);
 			}
 		},
 		start(startTime, opts) {
@@ -124,6 +127,13 @@ export default function repeater(controller, {
 			});
 			startOptions = undefined;
 		},
-		destroy() {}
+		destroy() {
+			while (pool.length) {
+				const source = pool.pop();
+				if (source.destroy) {
+					source.destroy();
+				}
+			}
+		}
 	};
 }

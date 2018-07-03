@@ -1,6 +1,7 @@
 import eventEmitter from 'event-emitter';
 import allOff from 'event-emitter/all-off';
 import createAudioContext from 'ios-safe-audio-context';
+import num from './util/num';
 // import MultiMap from './util/MultiMap';
 
 /*
@@ -77,11 +78,13 @@ function sortPlayed(a, b) {
 }
 
 let nextSoundEventId = 1;
+let nextShotId = 1;
 
 function SoundQ(options = {}) {
 	const context = options.context || getMainContext(this);
 
 	// todo: get pool limits from options
+	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
 	// todo: periodically empty out old instances from source pools
 
 	// queues, maps and sets for various pools and events
@@ -95,7 +98,44 @@ function SoundQ(options = {}) {
 
 	let scheduling = false;
 	let earliestStopTime = Infinity;
-	let nextShotId = 1;
+	let cleanUpTimeout = 0;
+
+	function cleanUp() {
+		clearTimeout(cleanUpTimeout);
+		cleanUpTimeout = 0;
+
+		const now = Date.now();
+		let maxAge = -1;
+
+		function cleanPool(pool) {
+			while (pool.length) {
+				const obj = pool[0];
+				const age = now - obj.lastUsed;
+				if (age < cacheExpiration) {
+					maxAge = Math.max(maxAge, age);
+					return;
+				}
+
+				if (obj.destroy) {
+					obj.destroy();
+				}
+				pool.shift();
+			}
+		}
+
+		patchPools.forEach(cleanPool);
+		allSources.forEach(({pool}) => cleanPool(pool));
+
+		if (maxAge >= 0) {
+			cleanUpTimeout = setTimeout(cleanUp, Math.max(20, cacheExpiration - maxAge));
+		}
+	}
+
+	function scheduleCleanUp() {
+		if (!cleanUpTimeout) {
+			cleanUpTimeout = setTimeout(cleanUp, cacheExpiration);
+		}
+	}
 
 	function updatePatch(source) {
 		const { patch, startTime, releaseTime, stopTime } = source;
@@ -260,7 +300,9 @@ function SoundQ(options = {}) {
 
 			if (!source.events.size && (shot.stopTime <= context.currentTime || source.done && source.done())) {
 				liveShots.delete(shot.id);
+				source.lastUsed = Date.now();
 				source.pool.push(source);
+				scheduleCleanUp();
 
 				if (source.finish) {
 					source.finish();
@@ -373,7 +415,8 @@ function SoundQ(options = {}) {
 			pool,
 			patchDef: null, // todo: don't store patch stuff here
 			patch: null,
-			shot: null
+			shot: null,
+			lastUsed: Number.MAX_SAFE_INTEGER
 		});
 
 		return source;
@@ -428,6 +471,8 @@ function SoundQ(options = {}) {
 		} else {
 			patch = definition(context/*, me*/);
 			patch.definition = definition;
+			patch.lastUsed = Number.MAX_SAFE_INTEGER;
+
 			if (!patch.input) {
 				patch.input = patch.output || patch.node;
 			}
@@ -450,8 +495,10 @@ function SoundQ(options = {}) {
 		// return it to the pool
 		const pool = patchPools.get(patch.definition);
 		if (pool) {
-			// todo: store timestamp for pruning later
+			// store timestamp for pruning later
+			patch.lastUsed = Date.now();
 			pool.push(patch);
+			scheduleCleanUp();
 		}
 	}
 

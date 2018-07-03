@@ -5,7 +5,7 @@ import gainEnvelope from '../src/patches/gainEnvelope';
 document.body.insertAdjacentHTML('beforeend', require('./oscillator.html'));
 
 const soundQ = new SoundQ({
-	// maxLiveSounds: 20
+	cacheExpiration: 2
 });
 
 // const oscillatorNode = soundQ.context.createOscillator();
