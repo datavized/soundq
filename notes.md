@@ -1,55 +1,54 @@
 Source Factory:
-- methods
+- [x] methods
   - start(startTime, releaseTime)
   - release(id or all, time)
   - stop(id or all, time)
-- register with sink
-- tell sink when the next event is ready
-- listen to sink for when we want another event
+- [x] register with sink
+- [x] tell sink when the next event is ready
+- [x] listen to sink for when we want another event
   - insert anything before specified time
-- tell sink to cancel a previously provided event
-- unregister from sink
+- [ ] tell sink to cancel a previously provided event
+- [ ] unregister from sink
 
 Source
-- new instance created by factory when 
+- [x] new instance created by factory when 
 
 Sink/Q
-- receive events from all/any sources
-- place incoming events in queue and sort
-- if too many active events in audio context, cancel
+- [x] receive events from all/any sources
+- [x] place incoming events in queue and sort
+- [ ] if too many active events in audio context, cancel
   - tell source to cancel
   - tear down resources
-- start events in audio context
+- [x] start events in audio context
   - set up any resources (source nodes, patches)
   - call start on source nodes (or source plugin)
-- ask source for more events as needed `request`
+- [x] ask source for more events as needed `request`
   - indicate next scheduled time
-- tell source we're done playing all submitted events `finish`
+- [x] tell source we're done playing all submitted events `finish`
 
 Patch
 - mostly same as before
 - composable
 - does not affect duration
 - receiving methods
-  - create function/closure
-  - start
-  - release
-  - stop
-  - destroy
-
+  - [x] create function/closure
+  - [x] start
+  - [x] release
+  - [x] stop
+  - [ ] destroy
 
 Source types
-- generic `AudioScheduledSourceNode`
-- buffer
+- [x] generic `AudioScheduledSourceNode`
+- [x] buffer
   - wrap generic
-- oscillator
+- [x] oscillator
   - wrap generic
-- multi
+- [ ] multi
   - takes another source as an option
   - copy multiShot
-- repeater
+- [x] repeater
   - takes another source as an option
-- DTMF?
+- [x] DTMF?
   - for fun/practice
   - combine two oscillators?
   - https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling
