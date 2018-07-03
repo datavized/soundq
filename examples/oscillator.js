@@ -1,6 +1,6 @@
 import SoundQ from '../src/index';
 import oscillator from '../src/sources/oscillator';
-// import audioNodeSource from '../src/sources/node';
+import gainEnvelope from '../src/patches/gainEnvelope';
 
 document.body.insertAdjacentHTML('beforeend', require('./oscillator.html'));
 
@@ -12,7 +12,7 @@ const soundQ = new SoundQ({
 // oscillatorNode.frequency.value = 440;
 // const shot = soundQ.shot(audioNodeSource, oscillatorNode);
 const source = soundQ.source(oscillator);
-const shot = soundQ.shot(source);
+const shot = soundQ.shot(source, gainEnvelope);
 
 const button = document.getElementById('play');
 button.disabled = false;
@@ -33,5 +33,6 @@ button.addEventListener('click', () => {
 	// 	shot.stop(soundQ.context.currentTime + stop, id);
 	// }
 	const id = shot.start(soundQ.context.currentTime, { frequency: 440 + Math.random() * 200 });
+	shot.release(soundQ.context.currentTime + 0.6, id);
 	shot.stop(soundQ.context.currentTime + 1, id);
 });

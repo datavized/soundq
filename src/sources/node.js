@@ -20,9 +20,7 @@ export default function audioNode(controller, node) {
 	}
 
 	function stopEvent({ stopTime }) {
-		submitted = false;
 		if (started) {
-			// console.log('stopping at', stopTime, 'now is', controller.context.currentTime);
 			node.stop(stopTime);
 		}
 	}
@@ -44,7 +42,6 @@ export default function audioNode(controller, node) {
 			started = true;
 			node.onended = ended;
 			node.start(startTime, offset || 0);
-			// console.log('started node', startTime);
 
 			if (stopTime < Infinity) {
 				stopEvent(sound);
@@ -63,6 +60,7 @@ export default function audioNode(controller, node) {
 		stop,
 		finishEvent() {
 			submitted = false;
+			startTime = Infinity;
 			eventId = 0;
 		}
 	};

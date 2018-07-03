@@ -22,7 +22,6 @@ export default function oscillator(controller) {
 	}
 
 	function stopEvent(event) {
-		submitted = false;
 		if (nodeSource) {
 			nodeSource.stopEvent(event);
 		}
@@ -57,6 +56,7 @@ export default function oscillator(controller) {
 		stop,
 		finishEvent(soundEvent) {
 			submitted = false;
+			startTime = Infinity;
 			if (nodeSource) {
 				nodeSource.finishEvent(soundEvent);
 			}
