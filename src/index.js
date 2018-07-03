@@ -550,6 +550,8 @@ function SoundQ(options = {}) {
 
 				source.patchDef = patchDef;
 
+				startTime = Math.max(context.currentTime, startTime);
+
 				const shotInfo = {
 					id,
 					shot,
@@ -583,6 +585,8 @@ function SoundQ(options = {}) {
 				}
 			},
 			stop(stopTime = context.currentTime, id) {
+				stopTime = Math.max(context.currentTime, stopTime);
+
 				// handle missing id for this shot def
 				if (id === undefined) {
 					liveShots.forEach(s => {

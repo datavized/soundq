@@ -48,7 +48,8 @@ export default function repeater(controller, {
 					pool.pop() :
 					source(controller, options);
 
-				sourceInstance.start(startTime);
+				const opts = typeof startOptions === 'function' ? startOptions({startTime, releaseTime, stopTime}, this.shot) : startOptions;
+				sourceInstance.start(startTime, opts);
 				if (sourceInstance.release) {
 					sourceInstance.release(releaseTime);
 				}
@@ -76,7 +77,7 @@ export default function repeater(controller, {
 		startEvent(soundEvent) {
 			const sourceInstance = sources.get(soundEvent.id);
 			if (sourceInstance && sourceInstance.source.startEvent) {
-				return sourceInstance.source.startEvent(soundEvent, startOptions);
+				return sourceInstance.source.startEvent(soundEvent);
 			}
 			return null;
 		},
@@ -111,7 +112,7 @@ export default function repeater(controller, {
 			// todo: revoke anything that hasn't started before this time
 			// todo: release anything that has started but hasn't stopped
 			sources.forEach(sourceInstance => {
-				if (sourceInstance.releaseTime > time) {
+				if (sourceInstance.releaseTime > time && sourceInstance.source.release) {
 					sourceInstance.source.release(time);
 				}
 			});
