@@ -9,7 +9,6 @@ export default function bufferSource(controller, options) {
 	const buffer = hasOptions ? options.buffer : options;
 	const offset = hasOptions && options.offset || 0;
 	const loop = !!(hasOptions && options.loop);
-	const playbackRate = hasOptions && options.playbackRate || 1;
 
 	let bufferSourceNode = null;
 	let nodeSource = null;
@@ -17,6 +16,8 @@ export default function bufferSource(controller, options) {
 	let submitted = false;
 	let startTime = Infinity;
 	let stopTime = Infinity;
+	let playbackRate = 1;
+	let done = true;
 
 	function stop(time) {
 		stopTime = time;
@@ -32,8 +33,11 @@ export default function bufferSource(controller, options) {
 	}
 
 	return {
+		done() {
+			return done;
+		},
 		request(untilTime) {
-			if (untilTime >= startTime && !submitted) {
+			if (untilTime > startTime && !submitted) {
 				// create bufferSourceNode and start nodeSource
 				bufferSourceNode = context.createBufferSource();
 				bufferSourceNode.loop = loop;
@@ -57,11 +61,14 @@ export default function bufferSource(controller, options) {
 		},
 		stopEvent,
 		start(time) {
+			done = false;
 			startTime = time;
 			stopTime = Infinity;
+			playbackRate = options && options.playbackRate || 1;
 		},
 		stop,
 		finishEvent(soundEvent) {
+			done = true;
 			submitted = false;
 			startTime = Infinity;
 			if (nodeSource) {

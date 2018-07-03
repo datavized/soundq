@@ -87,8 +87,7 @@ function SoundQ(options = {}) {
 	// queues, maps and sets for various pools and events
 	const allSources = new Map();
 	const allShots = new Set();
-	const activeShots = new Map(); // by id
-	const liveShots = new Set();
+	const liveShots = new Map(); // by id
 	const patchPools = new Map();
 	const soundEvents = new Map();
 	const unscheduledQueue = [];
@@ -156,7 +155,7 @@ function SoundQ(options = {}) {
 		const urgentTime = context.currentTime + MIN_LOOK_AHEAD;
 		liveShots.forEach(shot => {
 			const { source } = shot;
-			if (source.request) {
+			if (source.request && shot.stopTime > context.currentTime) {
 				let event = null;
 				do {
 					event = source.request(urgentTime);
@@ -170,7 +169,7 @@ function SoundQ(options = {}) {
 
 		liveShots.forEach(shot => {
 			const { source } = shot;
-			if (source.request) {
+			if (source.request && shot.stopTime > context.currentTime) {
 				let event = null;
 				do {
 					event = source.request(earliestStopTime + MIN_LOOK_AHEAD);
@@ -259,8 +258,8 @@ function SoundQ(options = {}) {
 			source.events.delete(sound);
 			// todo: fire stop event
 
-			if (!source.events.size && shot.stopTime <= context.currentTime) {
-				liveShots.delete(shot);
+			if (!source.events.size && (shot.stopTime <= context.currentTime || source.done && source.done())) {
+				liveShots.delete(shot.id);
 				source.pool.push(source);
 
 				if (source.finish) {
@@ -380,7 +379,7 @@ function SoundQ(options = {}) {
 		return source;
 	}
 
-	function startSourceShot(shot, time = context.currentTime, options) {
+	function startSourceShot(shot, time, options) {
 		// todo: what if we're already active?
 		const { source } = shot;
 		if (source.start) {
@@ -391,7 +390,7 @@ function SoundQ(options = {}) {
 		scheduleShots();
 	}
 
-	function releaseSourceShot(shot, time = context.currentTime) {
+	function releaseSourceShot(shot, time) {
 		// todo: what if we're already released?
 		const { source } = shot;
 		shot.releaseTime = time;
@@ -404,7 +403,7 @@ function SoundQ(options = {}) {
 		scheduleShots();
 	}
 
-	function stopSourceShot(shot, time = context.currentTime) {
+	function stopSourceShot(shot, time) {
 		// todo: what if we're already stopped?
 		// todo: release if release time is before this
 		const { source } = shot;
@@ -415,9 +414,6 @@ function SoundQ(options = {}) {
 		updatePatch(shot);
 		scheduleShots();
 	}
-
-	// function destroySourceShot(shot) {
-	// }
 
 	function getPatch(definition) {
 		let patch = null;
@@ -499,12 +495,7 @@ function SoundQ(options = {}) {
 		// todo: emit events
 		const shot = {
 			context,
-			start(startTime, options) {
-				/*
-				todo: queue up these start events
-				- if start is after lookahead, stick it in a queue
-				- update when we have a new stop time
-				*/
+			start(startTime = context.currentTime, options) {
 				const id = nextShotId++;
 				const source = sourcePool.length ?
 					sourcePool.pop() :
@@ -513,6 +504,8 @@ function SoundQ(options = {}) {
 				source.patchDef = patchDef;
 
 				const shotInfo = {
+					id,
+					shot,
 					source,
 					patchDef,
 					startTime,
@@ -522,29 +515,57 @@ function SoundQ(options = {}) {
 
 				source.shot = shotInfo;
 
-				liveShots.add(shotInfo);
-				activeShots.set(id, shotInfo);
+				liveShots.set(id, shotInfo);
 				startSourceShot(shotInfo, startTime, options);
 				return id;
 			},
-			release(releaseTime, id) {
-				// todo: handle missing id for this shot def
-				const shot = activeShots.get(id);
-				if (shot) {
-					releaseSourceShot(shot, releaseTime);
+			release(releaseTime = context.currentTime, id) {
+				// handle missing id for this shot def
+				if (id === undefined) {
+					liveShots.forEach(s => {
+						if (s.shot === shot && s.releaseTime > releaseTime) {
+							releaseSourceShot(s, releaseTime);
+						}
+					});
+					return;
+				}
+
+				const s = liveShots.get(id);
+				if (s) {
+					releaseSourceShot(s, releaseTime);
 				}
 			},
-			stop(stopTime, id) {
-				// todo: handle missing id for this shot def
-				const shot = activeShots.get(id);
-				if (shot) {
-					activeShots.delete(id);
-					stopSourceShot(shot, stopTime);
+			stop(stopTime = context.currentTime, id) {
+				// handle missing id for this shot def
+				if (id === undefined) {
+					liveShots.forEach(s => {
+						if (s.shot === shot && s.stopTime > stopTime) {
+							stopSourceShot(s, stopTime);
+						}
+					});
+					return;
+				}
+
+				const s = liveShots.get(id);
+				if (s) {
+					stopSourceShot(s, stopTime);
 				}
 			},
 			destroy() {
-				console.log('todo: destroy');
-				// destroySourceShot()
+				// todo: remove any event listeners
+				liveShots.forEach(s => {
+					if (s.shot === shot) {
+						stopSourceShot(s, 0);
+						s.source.events.forEach(e => revoke(e.id));
+					}
+				});
+				sourcePool.forEach(source => {
+					if (source.destroy) {
+						source.destroy();
+					}
+				});
+				sourcePool.length = 0;
+				allShots.delete(shot);
 			}
 		};
 

@@ -27,7 +27,7 @@ export default function audioNode(controller, node) {
 
 	return {
 		request(untilTime) {
-			if (untilTime >= startTime && !submitted) {
+			if (untilTime > startTime && !submitted) {
 				submitted = true;
 				return {
 					startTime,

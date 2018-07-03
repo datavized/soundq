@@ -29,7 +29,7 @@ export default function oscillator(controller) {
 
 	return {
 		request(untilTime) {
-			if (untilTime >= startTime && !submitted) {
+			if (untilTime > startTime && !submitted) {
 				// create oscillator and start nodeSource
 				output = context.createOscillator();
 				nodeSource = audioNodeSource(controller, output);

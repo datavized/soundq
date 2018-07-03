@@ -35,7 +35,7 @@ export default function dtmf(controller) {
 
 	return {
 		request(untilTime) {
-			if (untilTime >= startTime && !eventSources.size && keys[key]) {
+			if (untilTime > startTime && !eventSources.size && keys[key]) {
 				keys[key].forEach((frequency, i) => {
 					const source = sources[i];
 					source.start(startTime, { frequency });
