@@ -25,7 +25,6 @@ button.disabled = false;
 // button.addEventListener('mouseup', () => shot.stop(0, id));
 
 button.addEventListener('click', () => {
-	console.log('playing');
 	// for (let i = 0; i < 5; i++) {
 	// 	const start = 0 + i * 2;
 	// 	const stop = start + 0.5;

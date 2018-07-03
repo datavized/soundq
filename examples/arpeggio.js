@@ -38,7 +38,6 @@ const shot = soundQ.shot(source, gainEnvelope);
 
 const button = document.getElementById('play');
 button.addEventListener('mousedown', () => {
-	console.log('starting');
 	shot.start(0, ({startTime}, shot) => ({
 		frequency: freq(Math.floor((startTime - shot.startTime) / interval) % notes.length)
 	}));

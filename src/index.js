@@ -83,9 +83,7 @@ let nextShotId = 1;
 function SoundQ(options = {}) {
 	const context = options.context || getMainContext(this);
 
-	// todo: get pool limits from options
 	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
-	// todo: periodically empty out old instances from source pools
 
 	// queues, maps and sets for various pools and events
 	const allSources = new Map();
@@ -542,7 +540,7 @@ function SoundQ(options = {}) {
 		// todo: emit events
 		const shot = {
 			context,
-			start(startTime = context.currentTime, options) {
+			start(startTime = 0, options) {
 				const id = nextShotId++;
 				const source = sourcePool.length ?
 					sourcePool.pop() :
@@ -568,7 +566,9 @@ function SoundQ(options = {}) {
 				startSourceShot(shotInfo, startTime, options);
 				return id;
 			},
-			release(releaseTime = context.currentTime, id) {
+			release(releaseTime = 0, id) {
+				releaseTime = Math.max(context.currentTime, releaseTime);
+
 				// handle missing id for this shot def
 				if (id === undefined) {
 					liveShots.forEach(s => {
@@ -584,7 +584,7 @@ function SoundQ(options = {}) {
 					releaseSourceShot(s, releaseTime);
 				}
 			},
-			stop(stopTime = context.currentTime, id) {
+			stop(stopTime = 0, id) {
 				stopTime = Math.max(context.currentTime, stopTime);
 
 				// handle missing id for this shot def

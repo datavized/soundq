@@ -24,7 +24,6 @@ getAudioBuffer(audioFile).then(buffer => {
 
 	let id;
 	button.addEventListener('mousedown', () => {
-		console.log('starting');
 		id = shot.start(0);
 	});
 	button.addEventListener('mouseup', () => shot.stop(0, id));
