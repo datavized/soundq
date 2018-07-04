@@ -4,9 +4,13 @@ todo:
 - may need to make scheduleAhead run async in certain cases
 */
 
+import num from '../util/num';
+
+const DEFAULT_INTERVAL = 0.1;
+const DEFAULT_DURATION = 1;
+
+
 export default function repeater(controller, {
-	interval,
-	duration,
 	source,
 	options
 }) {
@@ -27,8 +31,23 @@ export default function repeater(controller, {
 	let startOptions = undefined;
 	let releaseTime = Infinity;
 
+	function revokeFutureSounds() {
+		submitted.forEach(id => {
+			const s = sources.get(id);
+			if (s) {
+				if (s.startTime >= releaseTime) {
+					controller.revoke(id);
+				} else {
+					latestStartTime = Math.max(latestStartTime, s.startTime);
+				}
+			}
+		});
+		latestSubmittedStartTime = Math.min(latestStartTime, latestSubmittedStartTime);
+	}
+
 	return {
 		request(untilTime) {
+			const interval = num(controller.get('interval'), DEFAULT_INTERVAL);
 			const past = context.currentTime - latestSubmittedStartTime;
 			const skipIntervals = Math.max(1, Math.ceil(past / interval));
 
@@ -41,6 +60,7 @@ export default function repeater(controller, {
 
 				// each event has start, release (Infinity?) and stop(Infinity?) times
 				// todo: get release from options?
+				const duration = num(controller.get('duration'), DEFAULT_DURATION);
 				const stopTime = startTime + duration;
 				const releaseTime = stopTime;
 
@@ -104,29 +124,27 @@ export default function repeater(controller, {
 		start(startTime, opts) {
 			// start this whole thing
 			startOptions = opts;
-			latestSubmittedStartTime = startTime - interval;
+			latestSubmittedStartTime = startTime - num(controller.get('interval'), 0.1);
 			releaseTime = Infinity;
 		},
 		release(time) {
 			releaseTime = time;
-			// todo: revoke anything that hasn't started before this time
-			// todo: release anything that has started but hasn't stopped
-			submitted.forEach(id => {
-				const s = sources.get(id);
-				if (s) {
-					if (s.startTime >= releaseTime) {
-						controller.revoke(id);
-					} else {
-						latestStartTime = Math.max(latestStartTime, s.startTime);
-					}
-				}
-			});
-			latestSubmittedStartTime = Math.min(latestStartTime, latestSubmittedStartTime);
+			// revoke anything that hasn't started before this time
+			// release anything that has started but hasn't stopped
+			revokeFutureSounds();
+
 			sources.forEach(sourceInstance => {
 				if (sourceInstance.releaseTime > time && sourceInstance.source.release) {
 					sourceInstance.source.release(time);
 				}
 			});
+		},
+		set(key) {
+			if (key === 'interval') {
+				revokeFutureSounds();
+				// todo: or better yet, resubmit future sounds
+				controller.schedule();
+			}
 		},
 		stop(time) {
 			// todo: revoke anything that hasn't stopped

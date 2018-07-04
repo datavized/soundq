@@ -19,23 +19,37 @@ getAudioBuffer(audioFile).then(buffer => {
 
 	const source = soundQ.source(repeater, {
 		source: bufferSource,
-		options: buffer,
-		interval: 0.2,
-		duration: 1
+		options: buffer
 	});
 	const shot = soundQ.shot(source);
+	shot.set({
+		interval: 0.5,
+		duration: 1
+	});
+
+	document.getElementById('interval').addEventListener('input', evt => {
+		shot.set('interval', parseFloat(evt.target.value));
+	});
 
 	const button = document.getElementById('play');
+	const start = document.getElementById('start');
+	const stop = document.getElementById('stop');
+
 	button.disabled = false;
+	start.disabled = false;
+	stop.disabled = false;
 
-	let id;
 	button.addEventListener('mousedown', () => {
-		id = shot.start();
+		shot.stop();
+		shot.start();
 	});
-	button.addEventListener('mouseup', () => shot.stop(0, id));
+	button.addEventListener('mouseup', () => shot.stop());
 
-	// button.addEventListener('click', () => {
-	// 	console.log('playing');
-	// 	shot.play(soundQ.context.currentTime, soundQ.context.currentTime + 2, soundQ.context.currentTime + 2);
-	// });
+	start.addEventListener('click', () => {
+		shot.stop();
+		shot.start();
+	});
+	stop.addEventListener('click', () => {
+		shot.stop();
+	});
 });

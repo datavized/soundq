@@ -137,16 +137,9 @@ function SoundQ(options = {}) {
 
 	function updatePatch(source) {
 		const { patch, startTime, releaseTime, stopTime } = source;
-		if (patch) {
-			if (patch.start) {
-				patch.start(startTime);
-			}
-			if (patch.release) {
-				patch.release(releaseTime);
-			}
-			if (patch.stop) {
-				patch.stop(stopTime);
-			}
+		if (patch && patch.start) {
+			// todo: pass in patch options
+			patch.start(startTime, releaseTime, stopTime);
 		}
 	}
 
@@ -256,13 +249,6 @@ function SoundQ(options = {}) {
 		scheduling = false;
 	}
 
-	/*
-	Schedule shots initiated by calls to .start on a shot
-	*/
-	function scheduleShots() {
-		scheduleSounds();
-	}
-
 	function calculateEarliestStopTime() {
 		earliestStopTime = Infinity;
 		for (let i = 0; i < playedSounds.length; i++) {
@@ -316,7 +302,7 @@ function SoundQ(options = {}) {
 
 			if (sound.startTime < context.currentTime) {
 				// only schedule further if this sound has actually played
-				scheduleShots();
+				scheduleSounds();
 			}
 		}
 	}
@@ -336,7 +322,7 @@ function SoundQ(options = {}) {
 				calculateEarliestStopTime();
 
 			}
-			scheduleShots();
+			scheduleSounds();
 		}
 	}
 
@@ -373,9 +359,14 @@ function SoundQ(options = {}) {
 				Object.assign(soundEvent, details);
 				soundEvent.releaseTime = Math.min(soundEvent.releaseTime, soundEvent.stopTime);
 
-				if (!soundEvents.has(id)) {
-					const needsSorting = unscheduledQueue.length && soundEvent.startTime <= unscheduledQueue[0].startTime;
-					unscheduledQueue.push(soundEvent);
+				if (soundEvents.has(id) && soundEvent.scheduled) {
+					// todo: update this? maybe cannot be changed if already started
+				} else {
+					const needsSorting = unscheduledQueue.length && soundEvent.startTime <= unscheduledQueue[unscheduledQueue.length - 1].startTime;
+					const newSound = !soundEvents.has(id);
+					if (newSound) {
+						unscheduledQueue.push(soundEvent);
+					}
 					if (needsSorting) {
 						// only sort when we need to
 						unscheduledQueue.sort(sortUnscheduled);
@@ -386,12 +377,7 @@ function SoundQ(options = {}) {
 					if (soundEvent.stopTime >= context.currentTime) {
 						earliestStopTime = Math.min(earliestStopTime, soundEvent.stopTime);
 					}
-				} else {
-					console.warn('double submit on event', soundEvent);
 				}
-
-				// todo: allow updating of already played event
-				// scheduleSounds(); ?
 
 				return id;
 			},
@@ -402,9 +388,15 @@ function SoundQ(options = {}) {
 			// clean up
 			stop,
 
+			get: key => source.shot.props[key],
+
 			// in case source wants to build in a patch
 			getPatch,
-			releasePatch
+			releasePatch,
+
+			// todo add get/release source
+
+			schedule: scheduleSounds
 		};
 
 		source = Object.assign(definition(controller, options), {
@@ -428,7 +420,7 @@ function SoundQ(options = {}) {
 		}
 		// todo: set release, stopTime to Infinity
 
-		scheduleShots();
+		scheduleSounds();
 	}
 
 	function releaseSourceShot(shot, time) {
@@ -441,7 +433,7 @@ function SoundQ(options = {}) {
 			source.stop(time);
 		}
 		updatePatch(shot);
-		scheduleShots();
+		scheduleSounds();
 	}
 
 	function stopSourceShot(shot, time) {
@@ -453,7 +445,7 @@ function SoundQ(options = {}) {
 			source.stop(time);
 		}
 		updatePatch(shot);
-		scheduleShots();
+		scheduleSounds();
 	}
 
 	function getPatch(definition) {
@@ -495,6 +487,9 @@ function SoundQ(options = {}) {
 		if (pool) {
 			// store timestamp for pruning later
 			patch.lastUsed = Date.now();
+			if (patch.reset) {
+				patch.reset();
+			}
 			pool.push(patch);
 			scheduleCleanUp();
 		}
@@ -537,6 +532,8 @@ function SoundQ(options = {}) {
 			pool: sourcePool
 		} = sourceDef;
 
+		const defaultProps = {};
+
 		// todo: emit events
 		const shot = {
 			context,
@@ -557,7 +554,8 @@ function SoundQ(options = {}) {
 					patchDef,
 					startTime,
 					releaseTime: Infinity,
-					stopTime: Infinity
+					stopTime: Infinity,
+					props: {...defaultProps}
 				};
 
 				source.shot = shotInfo;
@@ -580,9 +578,11 @@ function SoundQ(options = {}) {
 				}
 
 				const s = liveShots.get(id);
-				if (s) {
+				if (s && s.shot === shot) {
 					releaseSourceShot(s, releaseTime);
 				}
+
+				return shot;
 			},
 			stop(stopTime = 0, id) {
 				stopTime = Math.max(context.currentTime, stopTime);
@@ -598,9 +598,51 @@ function SoundQ(options = {}) {
 				}
 
 				const s = liveShots.get(id);
-				if (s) {
+				if (s && s.shot === shot) {
 					stopSourceShot(s, stopTime);
 				}
+
+				return shot;
+			},
+			set(id, key, value) {
+				if (typeof id !== 'number') {
+					value = key;
+					key = id;
+					id = undefined;
+				}
+
+				const shotInfo = liveShots.get(id);
+				if (id !== undefined && !shotInfo) {
+					return shot;
+				}
+
+				const props = shotInfo ? shotInfo.props : defaultProps;
+
+				if (typeof key === 'string') {
+					props[key] = value;
+					if (shotInfo && shotInfo.source.set) {
+						shotInfo.source.set(key, value);
+					}
+				} else if (key && typeof key === 'object') {
+					Object.assign(props, key);
+					if (id) {
+						for (const k in key) {
+							if (key.hasOwnProperty(k)) {
+								shot.set(id, k, key[k]);
+							}
+						}
+					}
+				}
+
+				if (id === undefined) {
+					liveShots.forEach(s => {
+						if (s.shot === shot/* && s.startTime > context.currentTime*/) {
+							shot.set(s.id, key, value);
+						}
+					});
+				}
+
+				return shot;
 			},
 			destroy() {
 				// todo: remove any event listeners

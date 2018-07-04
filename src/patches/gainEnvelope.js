@@ -9,35 +9,22 @@ export default function gainEnvelope(context) {
 	let stopTime = Infinity;
 	let options = {};
 
-	function apply() {
-		gain.cancelScheduledValues(context.currentTime);
-		applyEnvelope(gain, startTime, releaseTime, stopTime, options);
-	}
-
 	return {
 		input: gainNode,
 		output: gainNode,
-		start(time, opts = {}) {
-			if (startTime !== time || opts !== options) {
-				startTime = time;
-				releaseTime = Infinity;
-				stopTime = Infinity;
+		start(start, release, stop, opts = {}) {
+			if (startTime !== start || releaseTime !== release || stopTime !== stop || opts !== options) {
+				startTime = start;
+				releaseTime = release;
+				stopTime = stop;
 				options = opts;
 
-				apply();
+				gain.cancelScheduledValues(context.currentTime);
+				applyEnvelope(gain, startTime, releaseTime, stopTime, options);
 			}
 		},
-		release(time) {
-			if (releaseTime !== time) {
-				releaseTime = time;
-				apply();
-			}
-		},
-		stop(time) {
-			if (stopTime !== time) {
-				stopTime = time;
-				apply();
-			}
+		reset() {
+			gain.cancelScheduledValues(context.currentTime);
 		}
 	};
 }

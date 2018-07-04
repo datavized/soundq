@@ -30,11 +30,13 @@ const soundQ = new SoundQ({
 });
 
 const source = soundQ.source(repeater, {
-	source: oscillator,
-	interval,
-	duration: 0.39
+	source: oscillator
 });
-const shot = soundQ.shot(source, gainEnvelope);
+const shot = soundQ.shot(source, gainEnvelope)
+	.set({
+		interval,
+		duration: 0.39
+	});
 
 const button = document.getElementById('play');
 button.addEventListener('mousedown', () => {
