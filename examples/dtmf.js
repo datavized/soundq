@@ -6,8 +6,7 @@ document.body.insertAdjacentHTML('beforeend', require('./dtmf.html'));
 
 const soundQ = new SoundQ();
 
-const source = soundQ.source(dtmf);
-const shot = soundQ.shot(source);
+const shot = soundQ.shot(dtmf);
 
 const keyGrid = [
 	[1, 2, 3, 'A'],

@@ -16,8 +16,7 @@ function getAudioBuffer(url) {
 const audioFile = require('./audio/forest.mp3');
 getAudioBuffer(audioFile).then(buffer => {
 
-	const source = soundQ.source(bufferSource, buffer);
-	const shot = soundQ.shot(source);
+	const shot = soundQ.shot(bufferSource(buffer));
 
 	const button = document.getElementById('play');
 	button.disabled = false;

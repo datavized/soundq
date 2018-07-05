@@ -2,14 +2,6 @@ import eventEmitter from 'event-emitter';
 import allOff from 'event-emitter/all-off';
 import createAudioContext from 'ios-safe-audio-context';
 import num from './util/num';
-// import MultiMap from './util/MultiMap';
-
-/*
-definitions:
-- "active" shots have been started but not yet stopped
-- "live" shots have been started and possibly stopped or
-  not, but still have some live/pending sound events in the queue
-*/
 
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
@@ -86,9 +78,9 @@ function SoundQ(options = {}) {
 	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
 
 	// queues, maps and sets for various pools and events
-	const allSources = new Map();
 	const allShots = new Set();
 	const liveShots = new Map(); // by id
+	const sourcePools = new Map();
 	const patchPools = new Map();
 	const soundEvents = new Map();
 	const unscheduledQueue = [];
@@ -97,6 +89,7 @@ function SoundQ(options = {}) {
 	let scheduling = false;
 	let earliestStopTime = Infinity;
 	let cleanUpTimeout = 0;
+	let destroyed = false;
 
 	function cleanUp() {
 		clearTimeout(cleanUpTimeout);
@@ -105,11 +98,11 @@ function SoundQ(options = {}) {
 		const now = Date.now();
 		let maxAge = -1;
 
-		function cleanPool(pool) {
+		function cleanPool(pool, key, map) {
 			while (pool.length) {
 				const obj = pool[0];
 				const age = now - obj.lastUsed;
-				if (age < cacheExpiration) {
+				if (age < cacheExpiration && !destroyed) {
 					maxAge = Math.max(maxAge, age);
 					return;
 				}
@@ -119,10 +112,13 @@ function SoundQ(options = {}) {
 				}
 				pool.shift();
 			}
+
+			// Delete empty pool from map
+			map.delete(key);
 		}
 
 		patchPools.forEach(cleanPool);
-		allSources.forEach(({pool}) => cleanPool(pool));
+		sourcePools.forEach(cleanPool);
 
 		if (maxAge >= 0) {
 			cleanUpTimeout = setTimeout(cleanUp, Math.max(20, cacheExpiration - maxAge));
@@ -150,10 +146,10 @@ function SoundQ(options = {}) {
 			sound.scheduled = true;
 		}
 
-		// todo: set up patch from pool w/ *options*
 		if (shot.patchDef && !shot.patch) {
 			shot.patch = getPatch(shot.patchDef);
 		}
+		// todo: pass in patch options
 		updatePatch(shot);
 
 		// todo: use optional output destination
@@ -284,16 +280,15 @@ function SoundQ(options = {}) {
 
 			if (!source.events.size && (shot.stopTime <= context.currentTime || source.done && source.done())) {
 				liveShots.delete(shot.id);
-				source.lastUsed = Date.now();
-				source.pool.push(source);
-				scheduleCleanUp();
 
 				if (source.finish) {
 					source.finish();
 				}
 
+				freeSource(source);
+
 				if (shot.patch) {
-					releasePatch(shot.patch);
+					freePatch(shot.patch);
 					shot.patch = null;
 				}
 			}
@@ -328,13 +323,7 @@ function SoundQ(options = {}) {
 
 	this.context = context;
 
-	function makeShotSource(sourceDef) {
-		const {
-			definition,
-			options,
-			pool
-		} = sourceDef;
-
+	function makeShotSource(definition) {
 		let source = null;
 
 		const controller = {
@@ -392,19 +381,19 @@ function SoundQ(options = {}) {
 
 			// in case source wants to build in a patch
 			getPatch,
-			releasePatch,
+			freePatch,
 
-			// todo add get/release source
+			// add get/release source
+			getSource,
+			freeSource,
 
 			schedule: scheduleSounds
 		};
 
-		source = Object.assign(definition(controller, options), {
+		source = Object.assign(definition(controller), {
 			controller,
 			events: new Set(),
-			pool,
-			patchDef: null, // todo: don't store patch stuff here
-			patch: null,
+			definition,
 			shot: null,
 			lastUsed: Number.MAX_SAFE_INTEGER
 		});
@@ -423,7 +412,7 @@ function SoundQ(options = {}) {
 		scheduleSounds();
 	}
 
-	function releaseSourceShot(shot, time) {
+	function freeSourceShot(shot, time) {
 		// todo: what if we're already released?
 		const { source } = shot;
 		shot.releaseTime = time;
@@ -446,6 +435,40 @@ function SoundQ(options = {}) {
 		}
 		updatePatch(shot);
 		scheduleSounds();
+	}
+
+	function getSource(definition) {
+		const pool = sourcePools.get(definition);
+		if (pool && pool.length) {
+			return pool.pop();
+		}
+
+		return makeShotSource(definition);
+	}
+
+	function freeSource(source) {
+		if (source.expired && source.expired()) {
+			/*
+			Some sources cannot be re-used (e.g. AudioScheduledSourceNode),
+			so destroy them rather than adding back to the pool.
+			*/
+			if (source.destroy) {
+				source.destroy();
+			}
+			return;
+		}
+
+		let pool = sourcePools.get(source.definition);
+		if (!pool) {
+			pool = [];
+			sourcePools.set(source.definition, pool);
+		}
+
+		source.shot = null;
+		source.lastUsed = Date.now();
+
+		pool.push(source);
+		scheduleCleanUp();
 	}
 
 	function getPatch(definition) {
@@ -474,7 +497,7 @@ function SoundQ(options = {}) {
 		return patch;
 	}
 
-	function releasePatch(patch) {
+	function freePatch(patch) {
 		if (patch.input) {
 			patch.input.disconnect();
 		}
@@ -495,42 +518,11 @@ function SoundQ(options = {}) {
 		}
 	}
 
-	/*
-	todo: can we eliminate this?
-	- just pass def and options to source every time (too many params?)
-	- store pool in MultiMap
-	*/
-	this.source = (definition, options) => {
-		const s = Symbol();
-		allSources.set(s, {
-			definition,
-			options,
-			pool: []
-		});
-		return s;
-	};
-
 	this.shot = (sourceFn, patchDef) => {
 		// todo: if source is a buffer, create a new source for it
 		// todo: if source is an AudioScheduledSourceNode, create new source for it?
 		// todo: shuffle around order so code makes sense
 		// todo: get destination somewhere. shot options? play options?
-
-		// if (options === undefined && typeof patch !== 'function') {
-		// 	options = patch;
-		// 	patch = null;
-		// }
-
-		const sourceDef = allSources.get(sourceFn);
-		if (!sourceDef) {
-			throw new Error('Unknown source');
-		}
-
-		const {
-			// definition,
-			// options: sourceOpts,
-			pool: sourcePool
-		} = sourceDef;
 
 		const defaultProps = {};
 
@@ -539,11 +531,7 @@ function SoundQ(options = {}) {
 			context,
 			start(startTime = 0, options) {
 				const id = nextShotId++;
-				const source = sourcePool.length ?
-					sourcePool.pop() :
-					makeShotSource(sourceDef);
-
-				source.patchDef = patchDef;
+				const source = getSource(sourceFn);
 
 				startTime = Math.max(context.currentTime, startTime);
 
@@ -571,7 +559,7 @@ function SoundQ(options = {}) {
 				if (id === undefined) {
 					liveShots.forEach(s => {
 						if (s.shot === shot && s.releaseTime > releaseTime) {
-							releaseSourceShot(s, releaseTime);
+							freeSourceShot(s, releaseTime);
 						}
 					});
 					return;
@@ -579,7 +567,7 @@ function SoundQ(options = {}) {
 
 				const s = liveShots.get(id);
 				if (s && s.shot === shot) {
-					releaseSourceShot(s, releaseTime);
+					freeSourceShot(s, releaseTime);
 				}
 
 				return shot;
@@ -652,12 +640,6 @@ function SoundQ(options = {}) {
 						s.source.events.forEach(e => revoke(e.id));
 					}
 				});
-				sourcePool.forEach(source => {
-					if (source.destroy) {
-						source.destroy();
-					}
-				});
-				sourcePool.length = 0;
 				allShots.delete(shot);
 			}
 		};
@@ -668,7 +650,10 @@ function SoundQ(options = {}) {
 	};
 
 	this.destroy = () => {
+		destroyed = true;
+
 		allShots.forEach(s => s.destroy());
+		cleanUp();
 		releaseMainContext(this);
 
 		this.emit('destroy');

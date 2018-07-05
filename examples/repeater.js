@@ -17,11 +17,7 @@ function getAudioBuffer(url) {
 const audioFile = require('./audio/footstep-snow.mp3');
 getAudioBuffer(audioFile).then(buffer => {
 
-	const source = soundQ.source(repeater, {
-		source: bufferSource,
-		options: buffer
-	});
-	const shot = soundQ.shot(source);
+	const shot = soundQ.shot(repeater(bufferSource(buffer)));
 	shot.set({
 		interval: 0.5,
 		duration: 1
@@ -50,6 +46,7 @@ getAudioBuffer(audioFile).then(buffer => {
 		shot.start();
 	});
 	stop.addEventListener('click', () => {
-		shot.stop();
+		// shot.stop();
+		soundQ.destroy();
 	});
 });

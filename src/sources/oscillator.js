@@ -32,7 +32,7 @@ export default function oscillator(controller) {
 			if (untilTime > startTime && !submitted) {
 				// create oscillator and start nodeSource
 				output = context.createOscillator();
-				nodeSource = audioNodeSource(controller, output);
+				nodeSource = audioNodeSource(output)(controller);
 				nodeSource.start(startTime);
 				nodeSource.stop(stopTime);
 
@@ -57,7 +57,7 @@ export default function oscillator(controller) {
 		finishEvent(soundEvent) {
 			submitted = false;
 			startTime = Infinity;
-			if (nodeSource) {
+			if (nodeSource && nodeSource.finishEvent) {
 				nodeSource.finishEvent(soundEvent);
 			}
 			nodeSource = null;

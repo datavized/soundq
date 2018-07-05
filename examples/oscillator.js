@@ -11,8 +11,7 @@ const soundQ = new SoundQ({
 // const oscillatorNode = soundQ.context.createOscillator();
 // oscillatorNode.frequency.value = 440;
 // const shot = soundQ.shot(audioNodeSource, oscillatorNode);
-const source = soundQ.source(oscillator);
-const shot = soundQ.shot(source, gainEnvelope);
+const shot = soundQ.shot(oscillator, gainEnvelope);
 
 const button = document.getElementById('play');
 button.disabled = false;

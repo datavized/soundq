@@ -1,67 +1,75 @@
-export default function audioNode(controller, node) {
-	let started = false;
-	let eventId = 0;
-	let submitted = false;
-	let startTime = Infinity;
-	let stopTime = Infinity;
+export default function (node) {
+	if (!(node instanceof AudioScheduledSourceNode)) {
+		throw new Error('Node source requires an AudioScheduledSourceNode');
+	}
 
-	function stop(time) {
-		stopTime = time;
-		if (eventId && stopTime < Infinity) {
-			// signal to controller that we're ready to end this event
-			// controller will call finishEvent for us
-			controller.stop(eventId, stopTime);
+	return function audioNode(controller) {
+		let started = false;
+		let eventId = 0;
+		let submitted = false;
+		let startTime = Infinity;
+		let stopTime = Infinity;
+
+		function stop(time) {
+			stopTime = time;
+			if (eventId && stopTime < Infinity) {
+				// signal to controller that we're ready to end this event
+				// controller will call finishEvent for us
+				controller.stop(eventId, stopTime);
+			}
 		}
-	}
 
-	function ended() {
-		node.onended = null;
-		controller.revoke(eventId);
-	}
-
-	function stopEvent({ stopTime }) {
-		if (started) {
-			node.stop(stopTime);
+		function ended() {
+			node.onended = null;
+			controller.revoke(eventId);
 		}
-	}
 
-	return {
-		request(untilTime) {
-			if (untilTime > startTime && !submitted) {
-				submitted = true;
+		function stopEvent({ stopTime }) {
+			if (started) {
+				node.stop(stopTime);
+			}
+		}
+
+		return {
+			expired() {
+				return submitted;
+			},
+			request(untilTime) {
+				if (untilTime > startTime && !submitted) {
+					submitted = true;
+					return {
+						startTime,
+						stopTime
+					};
+				}
+				return null;
+			},
+			startEvent(sound, offset) {
+				const { startTime, stopTime } = sound;
+				eventId = sound.id;
+				started = true;
+				node.onended = ended;
+				node.start(startTime, offset || 0);
+
+				if (stopTime < Infinity) {
+					stopEvent(sound);
+				}
+
 				return {
-					startTime,
-					stopTime
+					output: node
 				};
-			}
-			return null;
-		},
-		startEvent(sound, offset) {
-			const { startTime, stopTime } = sound;
-			eventId = sound.id;
-			started = true;
-			node.onended = ended;
-			node.start(startTime, offset || 0);
+			},
+			stopEvent,
+			start(time) {
+				startTime = time;
+				stopTime = Infinity;
+			},
+			// release: stop,
+			stop
 
-			if (stopTime < Infinity) {
-				stopEvent(sound);
-			}
-
-			return {
-				output: node
-			};
-		},
-		stopEvent,
-		start(time) {
-			startTime = time;
-			stopTime = Infinity;
-		},
-		// release: stop,
-		stop,
-		finishEvent() {
-			submitted = false;
-			startTime = Infinity;
-			eventId = 0;
-		}
+			// This has no finishEvent because it cannot be restarted
+			// Audio nodes cannot be reused, so you just need to create a new instance
+			// node should be disconnected by core code and automatically garbage collected
+		};
 	};
 }

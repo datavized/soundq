@@ -29,10 +29,7 @@ const soundQ = new SoundQ({
 	cacheExpiration: 2
 });
 
-const source = soundQ.source(repeater, {
-	source: oscillator
-});
-const shot = soundQ.shot(source, gainEnvelope)
+const shot = soundQ.shot(repeater(oscillator), gainEnvelope)
 	.set({
 		interval,
 		duration: 0.39
