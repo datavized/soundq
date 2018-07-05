@@ -5,9 +5,7 @@ import num from './util/num';
 
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
-// const MIN_LATENCY = 0.05;
 const MAX_SCHEDULED_SOUNDS = 40;
-// const MIN_INTERVAL = 0.000001;
 
 let mainContext = null;
 const mainContextUsers = new Set();
@@ -237,7 +235,6 @@ function SoundQ(options = {}) {
 				startSoundEvent(sound);
 			} else {
 				// we missed one!
-				// todo: make this do something! we're probably leaking memory here
 				revoke(sound.id);
 			}
 		}
@@ -257,21 +254,24 @@ function SoundQ(options = {}) {
 	}
 
 	function revoke(eventId) {
-		const index = playedSounds.findIndex(s => s.id === eventId);
-		if (index >= 0) {
-
-			const sound = playedSounds[index];
+		const sound = soundEvents.get(eventId);
+		if (sound) {
 			const { source, shot } = sound;
 			sound.stopped = true;
 
-			playedSounds.splice(index, 1);
+			if (sound.scheduled) {
+				const index = playedSounds.findIndex(s => s.id === eventId);
+				if (index >= 0) {
+					playedSounds.splice(index, 1);
+				}
 
-			if (source.finishEvent) {
-				source.finishEvent(sound);
-			}
+				if (source.finishEvent) {
+					source.finishEvent(sound);
+				}
 
-			if (sound.output) {
-				sound.output.disconnect();
+				if (sound.output) {
+					sound.output.disconnect();
+				}
 			}
 
 			soundEvents.delete(eventId);
