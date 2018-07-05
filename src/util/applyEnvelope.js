@@ -2,19 +2,25 @@
 
 import num from './num';
 
-export default function applyEnvelope(param, startTime = 0, releaseTime = Infinity, stopTime = Infinity, options = {}) {
-	const peak = num(options.peak,  param.defaultValue); // value
-	const start = options.start || 0; // value
-	const attack = num(options.attack, 0.1); // time
-	const decay = num(options.decay, 0.2); // time
-	const sustain = num(options.sustain, 0.5); // value
-	// const release = num(options.release, 0.5); // time - todo: use this!
-	// const hold = num(options.hold, computeHold(attack, decay, release, duration)); // time
+const DEFAULT_RELEASE = 0.4; // 0?
+const DEFAULT_ATTACK = 0.1;
+const DEFAULT_DECAY = 0.2;
+const DEFAULT_SUSTAIN = 0.6;
 
-	// todo: make this more natural
-	releaseTime = Math.min(releaseTime, stopTime);
+export default function applyEnvelope(param, startTime = 0, releaseTime = Infinity, stopTime = Infinity, options = {}) {
+	const start = options.start || 0; // value
+	const release = num(options.release, DEFAULT_RELEASE); // time
+	const attack = num(options.attack, DEFAULT_ATTACK); // time
+	const decay = num(options.decay, DEFAULT_DECAY); // time
+	const sustain = num(options.sustain, DEFAULT_SUSTAIN); // value
+
+	releaseTime = Math.min(releaseTime, stopTime - release);
 
 	const peakTime = Math.min(startTime + attack, releaseTime);
+	const attackDuration = peakTime - startTime;
+
+	const peak = num(options.peak, param.defaultValue) * Math.min(1, attackDuration / attack);
+
 	const startSustainTime = Math.min(peakTime + decay, releaseTime);
 
 	param.setValueAtTime(start, startTime);
