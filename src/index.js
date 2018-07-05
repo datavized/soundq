@@ -2,6 +2,7 @@ import eventEmitter from 'event-emitter';
 import allOff from 'event-emitter/all-off';
 import createAudioContext from 'ios-safe-audio-context';
 import num from './util/num';
+import computeOptions from './util/computeOptions';
 
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
@@ -130,10 +131,19 @@ function SoundQ(options = {}) {
 	}
 
 	function updatePatch(source) {
-		const { patch, startTime, releaseTime, stopTime } = source;
+		const {
+			patch,
+			patchOptions,
+			startTime,
+			releaseTime,
+			stopTime
+		} = source;
 		if (patch && patch.start) {
-			// todo: pass in patch options
-			patch.start(startTime, releaseTime, stopTime);
+			// todo: compute patch options if there are any functions
+			patch.start(startTime, releaseTime, stopTime, computeOptions(
+				patchOptions,
+				{ startTime, releaseTime, stopTime }
+			));
 		}
 	}
 
@@ -526,9 +536,19 @@ function SoundQ(options = {}) {
 		// todo: emit events
 		const shot = {
 			context,
-			start(startTime = 0, options) {
+
+			/*
+			We may decide to merge options and patchOptions somehow
+			*/
+			start(startTime = 0, options, patchOptions) {
 				const id = nextShotId++;
 				const source = getSource(sourceFn);
+
+				if (typeof startTime === 'object') {
+					patchOptions = options;
+					options = startTime;
+					startTime = 0;
+				}
 
 				startTime = Math.max(context.currentTime, startTime);
 
@@ -540,7 +560,8 @@ function SoundQ(options = {}) {
 					startTime,
 					releaseTime: Infinity,
 					stopTime: Infinity,
-					props: {...defaultProps}
+					props: {...defaultProps},
+					patchOptions
 				};
 
 				source.shot = shotInfo;
@@ -559,7 +580,7 @@ function SoundQ(options = {}) {
 							releaseSourceShot(s, releaseTime);
 						}
 					});
-					return;
+					return shot;
 				}
 
 				const s = liveShots.get(id);
@@ -579,7 +600,7 @@ function SoundQ(options = {}) {
 							stopSourceShot(s, stopTime);
 						}
 					});
-					return;
+					return shot;
 				}
 
 				const s = liveShots.get(id);

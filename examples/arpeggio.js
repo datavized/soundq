@@ -7,6 +7,7 @@ const BASE = 440; // A
 const step = Math.pow(2, 1 / 12);
 const freq = n => BASE * Math.pow(step, n);
 const interval = 0.4;
+const duration = 0.4;
 
 // const notes = [
 // 	0,
@@ -29,10 +30,10 @@ const soundQ = new SoundQ({
 	cacheExpiration: 2
 });
 
-const shot = soundQ.shot(repeater(oscillator), gainEnvelope)
+const shot = soundQ.shot(repeater(oscillator, gainEnvelope))
 	.set({
 		interval,
-		duration: 0.39
+		duration
 	});
 
 const button = document.getElementById('play');

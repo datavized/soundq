@@ -5,20 +5,28 @@ todo:
 */
 
 import num from '../util/num';
+import computeOptions from '../util/computeOptions';
 
 const DEFAULT_INTERVAL = 0.1;
 const DEFAULT_DURATION = 1;
 
-
-export default function (sourceDef) {
+/*
+todo: find a better place to pass patchOptions
+*/
+export default function (sourceDef, patchDef, patchOptions) {
 	if (typeof sourceDef !== 'function') {
 		throw new Error('Repeater requires a source definition function');
+	}
+
+	if (patchDef && typeof patchDef !== 'function') {
+		throw new Error('Repeater patch definition needs to be a function');
 	}
 
 	return function repeater(controller) {
 
 		const submitted = new Set();
 		const sources = new Map();
+		const patches = new Map();
 		const { context } = controller;
 
 		let latestSubmittedStartTime = -Infinity;
@@ -90,13 +98,39 @@ export default function (sourceDef) {
 			startEvent(soundEvent) {
 				const sourceInstance = sources.get(soundEvent.id);
 				if (sourceInstance && sourceInstance.source.startEvent) {
-					return sourceInstance.source.startEvent(soundEvent);
+					const soundEventConfig = sourceInstance.source.startEvent(soundEvent);
+					if (patchDef) {
+						const patch = controller.getPatch(patchDef);
+						patches.set(soundEvent.id, patch);
+						if (patch && patch.start) {
+							// todo: pass in patch options
+							const { startTime, releaseTime, stopTime } = soundEvent;
+							patch.start(startTime, releaseTime, stopTime, computeOptions(
+								patchOptions,
+								{ startTime, releaseTime, stopTime }
+							));
+						}
+
+						if (patch.input) {
+							soundEventConfig.output.connect(patch.input);
+							return {
+								output: patch.output
+							};
+						}
+					}
+					return soundEventConfig;
 				}
 				return null;
 			},
 			stopEvent(soundEvent) {
 				const sourceInstance = sources.get(soundEvent.id);
 				if (sourceInstance && sourceInstance.source.stopEvent) {
+					const patch = patches.get(soundEvent.id);
+					if (patch && patch.start) {
+						// todo: pass in patch options
+						patch.start(soundEvent.startTime, soundEvent.releaseTime, soundEvent.stopTime);
+					}
+
 					sourceInstance.source.stopEvent(soundEvent);
 				}
 			},
@@ -109,6 +143,13 @@ export default function (sourceDef) {
 					if (sourceInstance.source.finishEvent) {
 						sourceInstance.source.finishEvent(soundEvent);
 					}
+
+					const patch = patches.get(soundEvent.id);
+					if (patch) {
+						controller.freePatch(patch);
+						patches.delete(soundEvent.id);
+					}
+
 					sources.delete(soundEvent.id);
 					controller.freeSource(sourceInstance.source);
 					submitted.delete(soundEvent.id);

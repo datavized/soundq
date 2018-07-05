@@ -1,0 +1,29 @@
+<div>
+	<button id="play">Play</button>
+	<button id="hold">Hold</button>
+	<button id="start">Start</button>
+	<button id="stop">Stop</button>
+</div>
+
+<style>
+	#controls {
+		display: grid;
+		grid-template-columns: max-content max-content;
+		grid-row-gap: 0.5em;
+		row-gap: 0.5em;
+		margin: 1em 0;
+	}
+</style>
+<div id="controls">
+	<label for="attack">Attack (time)</label>
+	<input id="attack" type="range" min="0" max="1" value="0.1" step="0.0001"/>
+
+	<label for="decay">Decay (time)</label>
+	<input id="decay" type="range" min="0" max="1" value="0.15" step="0.0001"/>
+
+	<label for="sustain">Sustain (level 0-1)</label>
+	<input id="sustain" type="range" min="0" max="1" value="0.5" step="0.0001"/>
+
+	<label for="decay">Release (time)</label>
+	<input id="release" type="range" min="0" max="1" value="0.2" step="0.0001"/>
+</div>

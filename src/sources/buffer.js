@@ -54,7 +54,7 @@ export default function bufferSourceFactory(buffer) {
 
 					const start = Math.max(startTime, context.currentTime);
 					nodeSource.start(start);
-					nodeSource.stop(loop ? stopTime : Math.min(stopTime, start + buffer.duration * playbackRate));
+					nodeSource.stop(loop ? stopTime : Math.min(stopTime, start + buffer.duration / playbackRate));
 
 					submitted = true;
 

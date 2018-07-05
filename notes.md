@@ -53,3 +53,16 @@ Source types
   - combine two oscillators?
   - https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling
   - end at zero crossing?
+
+Patch ideas
+- [ ] Panner
+- [x] ADSR Envelope
+  see https://blog.landr.com/adsr-envelopes-infographic/
+- [ ] Grain
+- [ ] window functions (usable in grain?)
+implement this using periodic wave
+  - https://devdocs.io/dom/periodicwave
+  - https://jackschaedler.github.io/circles-sines-signals/complex.html
+  - https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
+  - http://michaelkrzyzaniak.com/AudioSynthesis/2_Audio_Synthesis/11_Granular_Synthesis/1_Window_Functions/
+- [ ] Compose (util for composing multiple patches into one)

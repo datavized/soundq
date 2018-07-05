@@ -27,26 +27,37 @@ getAudioBuffer(audioFile).then(buffer => {
 		shot.set('interval', parseFloat(evt.target.value));
 	});
 
-	const button = document.getElementById('play');
-	const start = document.getElementById('start');
-	const stop = document.getElementById('stop');
+	const holdButton = document.getElementById('play');
+	const startButton = document.getElementById('start');
+	const stopButton = document.getElementById('stop');
 
-	button.disabled = false;
-	start.disabled = false;
-	stop.disabled = false;
+	holdButton.disabled = false;
+	startButton.disabled = false;
+	stopButton.disabled = false;
 
-	button.addEventListener('mousedown', () => {
+	function stop() {
 		shot.stop();
-		shot.start();
-	});
-	button.addEventListener('mouseup', () => shot.stop());
+	}
 
-	start.addEventListener('click', () => {
-		shot.stop();
+	function start() {
+		stop();
 		shot.start();
+	}
+
+	holdButton.addEventListener('mousedown', start);
+	holdButton.addEventListener('mouseup', stop);
+
+	holdButton.addEventListener('touchstart', evt => {
+		if (evt.touches.length === 1) {
+			start();
+		}
 	});
-	stop.addEventListener('click', () => {
-		// shot.stop();
-		soundQ.destroy();
+	holdButton.addEventListener('touchend', evt => {
+		if (evt.touches.length === 0) {
+			stop();
+		}
 	});
+
+	startButton.addEventListener('click', start);
+	stopButton.addEventListener('click', stop);
 });
