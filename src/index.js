@@ -412,7 +412,7 @@ function SoundQ(options = {}) {
 		scheduleSounds();
 	}
 
-	function freeSourceShot(shot, time) {
+	function releaseSourceShot(shot, time) {
 		// todo: what if we're already released?
 		const { source } = shot;
 		shot.releaseTime = time;
@@ -472,32 +472,29 @@ function SoundQ(options = {}) {
 	}
 
 	function getPatch(definition) {
-		let patch = null;
-		let pool = patchPools.get(definition);
-		if (!pool) {
-			pool = [];
-			patchPools.set(definition, pool);
+		const pool = patchPools.get(definition);
+		if (pool && pool.length) {
+			return pool.pop();
 		}
 
-		if (pool.length) {
-			patch = pool.pop();
-		} else {
-			patch = definition(context/*, me*/);
-			patch.definition = definition;
-			patch.lastUsed = Number.MAX_SAFE_INTEGER;
+		const patch = definition(context);
+		patch.definition = definition;
+		patch.lastUsed = Number.MAX_SAFE_INTEGER;
 
-			if (!patch.input) {
-				patch.input = patch.output || patch.node;
-			}
-			if (!patch.output) {
-				patch.output = patch.input || patch.node;
-			}
+		if (!patch.input) {
+			patch.input = patch.output || patch.node;
+		}
+		if (!patch.output) {
+			patch.output = patch.input || patch.node;
 		}
 
 		return patch;
 	}
 
 	function freePatch(patch) {
+		if (patch.reset) {
+			patch.reset();
+		}
 		if (patch.input) {
 			patch.input.disconnect();
 		}
@@ -506,16 +503,16 @@ function SoundQ(options = {}) {
 		}
 
 		// return it to the pool
-		const pool = patchPools.get(patch.definition);
-		if (pool) {
-			// store timestamp for pruning later
-			patch.lastUsed = Date.now();
-			if (patch.reset) {
-				patch.reset();
-			}
-			pool.push(patch);
-			scheduleCleanUp();
+		let pool = patchPools.get(patch.definition);
+		if (!pool) {
+			pool = [];
+			sourcePools.set(patch.definition, pool);
 		}
+
+		// store timestamp for pruning later
+		patch.lastUsed = Date.now();
+		pool.push(patch);
+		scheduleCleanUp();
 	}
 
 	this.shot = (sourceFn, patchDef) => {
@@ -559,7 +556,7 @@ function SoundQ(options = {}) {
 				if (id === undefined) {
 					liveShots.forEach(s => {
 						if (s.shot === shot && s.releaseTime > releaseTime) {
-							freeSourceShot(s, releaseTime);
+							releaseSourceShot(s, releaseTime);
 						}
 					});
 					return;
@@ -567,7 +564,7 @@ function SoundQ(options = {}) {
 
 				const s = liveShots.get(id);
 				if (s && s.shot === shot) {
-					freeSourceShot(s, releaseTime);
+					releaseSourceShot(s, releaseTime);
 				}
 
 				return shot;
