@@ -19,12 +19,16 @@ export default function applyEnvelope(param, startTime = 0, releaseTime = Infini
 	const peakTime = Math.min(startTime + attack, releaseTime);
 	const attackDuration = peakTime - startTime;
 
-	const peak = num(options.peak, param.defaultValue) * Math.min(1, attackDuration / attack);
+	const peak = num(options.peak, param.defaultValue) * Math.min(1, attack ? attackDuration / attack : 1);
 
 	const startSustainTime = Math.min(peakTime + decay, releaseTime);
 
-	param.setValueAtTime(start, startTime);
-	param.linearRampToValueAtTime(peak, peakTime);
+	if (peakTime > startTime) {
+		param.setValueAtTime(start, startTime);
+	}
+	if (startSustainTime > peakTime) {
+		param.linearRampToValueAtTime(peak, peakTime);
+	}
 	param.linearRampToValueAtTime(sustain, startSustainTime);
 
 	if (releaseTime < Infinity) {
