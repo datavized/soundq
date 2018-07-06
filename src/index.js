@@ -288,6 +288,11 @@ function SoundQ(options = {}) {
 			source.events.delete(sound);
 			// todo: fire stop event
 
+			/*
+			todo: if released and no more events scheduled:
+			- fire an event
+			- possibly (optionally?) stop the shot
+			*/
 			if (!source.events.size && (shot.stopTime <= context.currentTime || source.done && source.done())) {
 				liveShots.delete(shot.id);
 
@@ -387,7 +392,7 @@ function SoundQ(options = {}) {
 			// clean up
 			stop,
 
-			get: key => source.shot.props[key],
+			get: key => source.props[key],
 
 			// in case source wants to build in a patch
 			getPatch,
@@ -405,8 +410,19 @@ function SoundQ(options = {}) {
 			events: new Set(),
 			definition,
 			shot: null,
+			props: {},
 			lastUsed: Number.MAX_SAFE_INTEGER
 		});
+
+		const set = source.set;
+		source.set = (key, val) => {
+			if (!source.shot) {
+				source.props[key] = val;
+			}
+			if (set) {
+				set.call(source, key, val);
+			}
+		};
 
 		return source;
 	}
@@ -541,15 +557,14 @@ function SoundQ(options = {}) {
 			We may decide to merge options and patchOptions somehow
 			*/
 			start(startTime = 0, options, patchOptions) {
-				const id = nextShotId++;
-				const source = getSource(sourceFn);
-
-				if (typeof startTime === 'object') {
+				if (typeof startTime !== 'number' && startTime !== undefined) {
 					patchOptions = options;
 					options = startTime;
 					startTime = 0;
 				}
 
+				const id = nextShotId++;
+				const source = getSource(sourceFn);
 				startTime = Math.max(context.currentTime, startTime);
 
 				const shotInfo = {
@@ -565,6 +580,13 @@ function SoundQ(options = {}) {
 				};
 
 				source.shot = shotInfo;
+				source.props = shotInfo.props;
+
+				for (const key in source.props) {
+					if (source.props.hasOwnProperty(key)) {
+						source.set(key, source.props[key]);
+					}
+				}
 
 				liveShots.set(id, shotInfo);
 				startSourceShot(shotInfo, startTime, options);
@@ -654,7 +676,7 @@ function SoundQ(options = {}) {
 				// todo: remove any event listeners
 				liveShots.forEach(s => {
 					if (s.shot === shot) {
-						stopSourceShot(s, 0);
+						stopSourceShot(s, context.currentTime);
 						s.source.events.forEach(e => revoke(e.id));
 					}
 				});

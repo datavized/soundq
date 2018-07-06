@@ -9,6 +9,7 @@ import computeOptions from '../util/computeOptions';
 
 const DEFAULT_INTERVAL = 0.1;
 const DEFAULT_DURATION = 1;
+const cancelProperties = ['interval', 'duration', 'playbackRate'];
 
 /*
 todo: find a better place to pass patchOptions
@@ -34,6 +35,18 @@ export default function (sourceDef, patchDef, patchOptions) {
 		let startOptions = undefined;
 		let releaseTime = Infinity;
 
+		function startPatch(patch, props, soundEvent) {
+			const startOpts = {...props};
+			delete startOpts.duration;
+			delete startOpts.interval;
+
+			const { startTime, releaseTime, stopTime } = soundEvent;
+			patch.start(startTime, releaseTime, stopTime, Object.assign(startOpts, computeOptions(
+				patchOptions,
+				{ startTime, releaseTime, stopTime }
+			)));
+		}
+
 		function revokeFutureSounds() {
 			submitted.forEach(id => {
 				const s = sources.get(id);
@@ -50,36 +63,41 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 		return {
 			request(untilTime) {
-				const interval = num(controller.get('interval'), DEFAULT_INTERVAL);
+				const {
+					duration,
+					interval,
+					...restProps
+				} = this.props;
+
+				const intervalVal = num(interval, DEFAULT_INTERVAL);
 				const past = context.currentTime - latestSubmittedStartTime;
-				const skipIntervals = Math.max(1, Math.ceil(past / interval));
+				const skipIntervals = Math.max(1, Math.ceil(past / intervalVal));
 
 				// todo: maxTime should account for duration
-				const startTime = latestSubmittedStartTime + skipIntervals * interval;
+				const startTime = latestSubmittedStartTime + skipIntervals * intervalVal;
 				const maxTime = Math.min(untilTime, releaseTime);
 				if (startTime < maxTime && skipIntervals > 0) {
 
 					latestSubmittedStartTime = startTime;
 
-					// each event has start, release (Infinity?) and stop(Infinity?) times
+					// each event has start, release (Infinity?) and stop(Infinity?) time
 					// todo: get release from options?
-					const duration = num(controller.get('duration'), DEFAULT_DURATION);
-					const stopTime = startTime + duration;
+
+					const stopTime = startTime + num(duration, DEFAULT_DURATION);
 					const releaseTime = stopTime;
 
 					const sourceInstance = controller.getSource(sourceDef);
 
 					// optionally use a function to compute options passed to each event
-					const opts = typeof startOptions === 'function' ? startOptions({startTime, releaseTime, stopTime}, this.shot) : startOptions;
-					sourceInstance.start(startTime, opts);
+					sourceInstance.start(startTime, Object.assign(restProps, computeOptions(startOptions, {startTime, releaseTime, stopTime}, this.shot)));
 					if (sourceInstance.release) {
 						sourceInstance.release(releaseTime);
 					}
 					if (sourceInstance.stop) {
 						sourceInstance.stop(stopTime);
 					}
-					const event = sourceInstance.request(untilTime);
 
+					const event = sourceInstance.request(untilTime);
 					if (event) {
 						const id = controller.submit(event);
 						sources.set(id, {
@@ -103,12 +121,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 						const patch = controller.getPatch(patchDef);
 						patches.set(soundEvent.id, patch);
 						if (patch && patch.start) {
-							// todo: pass in patch options
-							const { startTime, releaseTime, stopTime } = soundEvent;
-							patch.start(startTime, releaseTime, stopTime, computeOptions(
-								patchOptions,
-								{ startTime, releaseTime, stopTime }
-							));
+							startPatch(patch, this.props, soundEvent);
 						}
 
 						if (patch.input) {
@@ -127,8 +140,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 				if (sourceInstance && sourceInstance.source.stopEvent) {
 					const patch = patches.get(soundEvent.id);
 					if (patch && patch.start) {
-						// todo: pass in patch options
-						patch.start(soundEvent.startTime, soundEvent.releaseTime, soundEvent.stopTime);
+						startPatch(patch, this.props, soundEvent);
 					}
 
 					sourceInstance.source.stopEvent(soundEvent);
@@ -156,7 +168,10 @@ export default function (sourceDef, patchDef, patchOptions) {
 				}
 			},
 			set(key) {
-				if (key === 'interval') {
+				/*
+				todo: undo most of these. they should be done in a wrapper source
+				*/
+				if (cancelProperties.indexOf(key) >= 0) {
 					revokeFutureSounds();
 					controller.schedule();
 				}
@@ -164,7 +179,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 			start(startTime, opts) {
 				// start this whole thing
 				startOptions = opts;
-				latestSubmittedStartTime = startTime - num(controller.get('interval'), 0.1);
+				latestSubmittedStartTime = startTime - num(controller.get('interval'), DEFAULT_INTERVAL);
 				releaseTime = Infinity;
 			},
 			release(time) {
@@ -177,6 +192,9 @@ export default function (sourceDef, patchDef, patchOptions) {
 				sources.forEach(sourceInstance => {
 					if (sourceInstance.releaseTime > time && sourceInstance.source.release) {
 						sourceInstance.source.release(time);
+					}
+					if (sourceInstance.startTime > time && sourceInstance.source.stop) {
+						sourceInstance.source.stop(time);
 					}
 				});
 			},
