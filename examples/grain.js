@@ -2,7 +2,9 @@ import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 // import granulizer from '../src/sources/granulizer';
 import repeater from '../src/sources/repeater';
-import grain from '../src/patches/grain';
+import compose from '../src/patches/compose';
+import panner from '../src/patches/panner';
+import trapezoid from '../src/patches/trapezoid';
 import dragDrop from './util/drag-drop';
 import drawWaveform from 'draw-wave';
 import { Knob } from 'uil/src/proto/Knob';
@@ -28,10 +30,11 @@ todo:
 */
 const grainOptions = {
 	amplitude: 0.1,
+	crossFadeRelative: 0.5,
 	crossFade: 0.5,
 	length: 0.6,
 	spread: 0.1,
-	pan: 0.25
+	panSpread: 0.25
 };
 
 const repeaterOptions = {
@@ -44,6 +47,7 @@ let audioBuffer = null;
 let playing = false;
 let mouseIsDown = false;
 
+const grain = compose([trapezoid, panner]);
 const calcGrainOptions = grainOptions;
 
 /*
@@ -61,6 +65,10 @@ function calcRepeaterOptions({startTime}) {
 		playbackRate: repeaterOptions.transpose, // temp
 		offset: adjustedOffset
 	};
+}
+
+function setCrossFade() {
+	grainOptions.crossFade = grainOptions.crossFadeRelative * 0.5 * (grainOptions.length || 1);
 }
 
 const controlDefs = [
@@ -94,6 +102,7 @@ const controlDefs = [
 			if (granular) {
 				granular.set('duration', val);
 			}
+			setCrossFade();
 		}
 	},
 	{
@@ -108,7 +117,12 @@ const controlDefs = [
 		name: 'X-Fade',
 		min: 0,
 		max: 1,
-		target: grainOptions
+		val: 0.5,
+		// target: grainOptions
+		cb: val => {
+			grainOptions.crossFadeRelative = val;
+			setCrossFade();
+		}
 	},
 	{
 		key: 'transpose',
@@ -123,7 +137,7 @@ const controlDefs = [
 		}
 	},
 	{
-		key: 'pan',
+		key: 'panSpread',
 		name: 'Pan Spread',
 		min: 0,
 		max: 1,

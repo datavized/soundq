@@ -10,12 +10,11 @@ export default function trapezoid(context) {
 		start(startTime, releaseTime, stopTime, options = {}) {
 			const {
 				amplitude,
-				crossFade, // time in seconds
-				pan
+				crossFade // time in seconds
 			} = options;
 
 			const length = stopTime - startTime;
-			const fadeDuration = Math.max(minFadeDuration, crossFade);
+			const fadeDuration = Math.min(Math.max(crossFade, minFadeDuration), length / 2);
 			const fadeInTime = startTime + fadeDuration;
 			const fadeOutTime = stopTime - fadeDuration;
 

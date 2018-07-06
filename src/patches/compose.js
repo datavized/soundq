@@ -38,7 +38,6 @@ export default function compose(definitions) {
 						);
 					}
 				});
-				return result;
 			},
 			destroy() {
 				patches.forEach(patch => {

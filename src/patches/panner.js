@@ -1,6 +1,5 @@
 export default context => {
 	const panner = context.createStereoPanner();
-	gain.connect(panner);
 
 	return {
 		node: panner,
@@ -21,4 +20,4 @@ export default context => {
 			panner.pan.setValueAtTime(panVal, startTime);
 		}
 	};
-}
+};
