@@ -1,4 +1,4 @@
-export default (options, arg) =>
+export default (options, ...args) =>
 	typeof options === 'function' ?
-		options(arg) :
+		options(...args) :
 		options;
