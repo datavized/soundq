@@ -53,7 +53,8 @@ export default function bufferSourceFactory(buffer) {
 					nodeSource = audioNodeSource(bufferSourceNode)(controller);
 
 					const start = Math.max(startTime, context.currentTime);
-					nodeSource.start(start);
+					const offset = startOptions.offset || 0;
+					nodeSource.start(start, offset);
 					nodeSource.stop(loop ? stopTime : Math.min(stopTime, start + buffer.duration / playbackRate));
 
 					submitted = true;
@@ -64,9 +65,8 @@ export default function bufferSourceFactory(buffer) {
 				return null;
 			},
 			startEvent(sound) {
-				const offset = startOptions.offset || 0;
 				bufferSourceNode.buffer = buffer;
-				return nodeSource.startEvent(sound, offset);
+				return nodeSource.startEvent(sound);
 			},
 			stopEvent,
 			start(time, opts) {
