@@ -4,6 +4,15 @@ todo:
 - may need to make scheduleAhead run async in certain cases
 */
 
+/*
+todo:
+Each source instance needs a `parent` object
+- with start/release/stop times
+- point to parent source
+- set of prop values
+- parent may be a shot or it may be another source that created it
+*/
+
 import num from '../util/num';
 import computeOptions from '../util/computeOptions';
 
