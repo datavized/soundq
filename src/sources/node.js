@@ -9,6 +9,7 @@ export default function (node) {
 		let submitted = false;
 		let startTime = Infinity;
 		let stopTime = Infinity;
+		let offset = 0;
 
 		function stop(time) {
 			stopTime = time;
@@ -44,12 +45,12 @@ export default function (node) {
 				}
 				return null;
 			},
-			startEvent(sound, offset) {
+			startEvent(sound) {
 				const { startTime, stopTime } = sound;
 				eventId = sound.id;
 				started = true;
 				node.onended = ended;
-				node.start(startTime, offset || 0);
+				node.start(startTime, offset);
 
 				if (stopTime < Infinity) {
 					stopEvent(sound);
@@ -60,9 +61,10 @@ export default function (node) {
 				};
 			},
 			stopEvent,
-			start(time) {
+			start(time, o) {
 				startTime = time;
 				stopTime = Infinity;
+				offset = o || 0;
 			},
 			// release: stop,
 			stop
