@@ -1,12 +1,12 @@
 import SoundQ from '../src/index';
 import dtmf from '../src/sources/dtmf';
-// import gainEnvelope from '../src/patches/gainEnvelope';
+import gainEnvelope from '../src/patches/gainEnvelope';
 
 document.body.insertAdjacentHTML('beforeend', require('./dtmf.html'));
 
 const soundQ = new SoundQ();
 
-const shot = soundQ.shot(dtmf);
+const shot = soundQ.shot(dtmf, gainEnvelope);
 
 const keyGrid = [
 	[1, 2, 3, 'A'],
@@ -24,11 +24,17 @@ keyGrid.forEach(row => {
 		button.textContent = key;
 
 		const up = () => {
-			shot.stop(0, shotId);
+			shot.release(soundQ.context.currentTime, shotId);
+			shot.stop(soundQ.context.currentTime + 0.02, shotId);
 		};
 		const down = () => {
 			up(); // just in case
-			shotId = shot.start(0, {key});
+			shotId = shot.start(0, {key}, {
+				attack: 0,
+				release: 0.02,
+				decay: 0,
+				sustain: 0.15
+			});
 		};
 		button.addEventListener('mousedown', down);
 		button.addEventListener('mouseup', up);
