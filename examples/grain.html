@@ -1,0 +1,33 @@
+<style type="text/css">
+	body {
+		background-color: #aaa;
+		margin: 0;
+		padding: 0;
+	}
+	#waveform-container {
+		position: relative;
+		cursor: pointer;
+	}
+	#waveform {
+		width: 100%;
+		height: 200px;
+	}
+	#playhead {
+		position: absolute;
+		height: 100%;
+		width: 1px;
+		background-color: blue;
+		top: 0;
+		left: 10%;
+	}
+</style>
+<div id="waveform-container">
+	<canvas id="waveform" width="800" height="200"></canvas>
+	<span id="playhead"></span>
+</div>
+<div id="controls">
+	<button id="start" disabled>Start</button>
+	<button id="stop" disabled>Stop</button>
+	<button id="touch" disabled>Touch</button>
+	<button id="export" disabled>Export</button>
+</div>
