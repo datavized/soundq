@@ -9,20 +9,23 @@ const freq = n => BASE * Math.pow(step, n);
 const interval = 0.4;
 const duration = 0.4;
 
-// const notes = [
-// 	0,
-// 	2,
-// 	4,
-// 	5,
-// 	7
-// ];
-
 const notes = [
 	0,
+	2,
 	4,
+	5,
 	7,
+	5,
+	4,
 	2
 ];
+
+// const notes = [
+// 	0,
+// 	4,
+// 	7,
+// 	2
+// ];
 
 document.body.insertAdjacentHTML('beforeend', require('./arpeggio.html'));
 
@@ -39,7 +42,7 @@ const shot = soundQ.shot(repeater(oscillator, gainEnvelope))
 const button = document.getElementById('play');
 button.addEventListener('mousedown', () => {
 	shot.start(0, ({startTime}, shot) => ({
-		frequency: freq(Math.floor((startTime - shot.startTime) / interval) % notes.length)
+		frequency: freq(notes[Math.floor((startTime - shot.startTime) / interval) % notes.length])
 	}));
 });
 button.addEventListener('mouseup', () => shot.release(0));
