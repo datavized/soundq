@@ -1,10 +1,12 @@
 import SoundQ from '../src/index';
+
 import bufferSource from '../src/sources/buffer';
 // import granulizer from '../src/sources/granulizer';
 import repeater from '../src/sources/repeater';
 import compose from '../src/patches/compose';
 import panner from '../src/patches/panner';
 import trapezoid from '../src/patches/trapezoid';
+
 import dragDrop from './util/drag-drop';
 import drawWaveform from 'draw-wave';
 import { Knob } from 'uil/src/proto/Knob';
@@ -21,13 +23,6 @@ function getAudioBuffer(url) {
 		.then(buffer => audioContext.decodeAudioData(buffer));
 }
 
-/*
-todo:
-- need a way to modify these options on the fly and have them passed
-  through repeater to grain play options AT START TIME, not at schedule time
-- compose trim -> grain where trim takes offset?
-  or maybe grain should do it all and report offset and duration
-*/
 const grainOptions = {
 	amplitude: 0.1,
 	crossFadeRelative: 0.5,

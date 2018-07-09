@@ -14,24 +14,34 @@ export default function oscillator(controller) {
 	let startTime = Infinity;
 	let stopTime = Infinity;
 
-	function stop(time) {
-		stopTime = time;
-		if (nodeSource) {
-			nodeSource.stop(stopTime);
-		}
-	}
-
-	function stopEvent(event) {
-		if (nodeSource) {
-			nodeSource.stopEvent(event);
-		}
-	}
-
 	return {
+		done() {
+			return nodeSource.done && nodeSource.done();
+		},
+		start(time, options = {}) {
+			startTime = time;
+			stopTime = Infinity;
+			frequency = options.frequency || 440;
+		},
+		stop(time) {
+			stopTime = time;
+			if (nodeSource) {
+				nodeSource.stop(stopTime);
+			}
+		},
+		finish() {
+			submitted = false;
+			startTime = Infinity;
+			if (nodeSource && nodeSource.finish) {
+				nodeSource.finish();
+			}
+			nodeSource = null;
+		},
 		request(untilTime) {
 			if (untilTime > startTime && !submitted) {
 				// create oscillator and start nodeSource
 				output = context.createOscillator();
+				output.frequency.setValueAtTime(frequency, startTime);
 				nodeSource = audioNodeSource(output)(controller);
 				nodeSource.start(startTime);
 				nodeSource.stop(stopTime);
@@ -42,25 +52,18 @@ export default function oscillator(controller) {
 			}
 			return null;
 		},
-		startEvent(sound) {
-			const { startTime } = sound;
-			output.frequency.setValueAtTime(frequency, startTime);
-			return nodeSource.startEvent(sound);
+		startEvent(soundEvent) {
+			return nodeSource.startEvent && nodeSource.startEvent(soundEvent) || null;
 		},
-		stopEvent,
-		start(time, options = {}) {
-			startTime = time;
-			stopTime = Infinity;
-			frequency = options.frequency || 440;
+		stopEvent(soundEvent) {
+			if (nodeSource) {
+				nodeSource.stopEvent(soundEvent);
+			}
 		},
-		stop,
 		finishEvent(soundEvent) {
-			submitted = false;
-			startTime = Infinity;
 			if (nodeSource && nodeSource.finishEvent) {
 				nodeSource.finishEvent(soundEvent);
 			}
-			nodeSource = null;
 		}
 	};
 }

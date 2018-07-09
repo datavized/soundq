@@ -28,11 +28,6 @@ export default function dtmf(controller) {
 	let startTime = Infinity;
 	let stopTime = Infinity;
 
-	function stop(time) {
-		stopTime = time;
-		eventSources.forEach(source => source.stop(stopTime));
-	}
-
 	return {
 		request(untilTime) {
 			if (untilTime > startTime && !eventSources.size && keys[key]) {
@@ -49,6 +44,15 @@ export default function dtmf(controller) {
 			}
 			return null;
 		},
+		start(time, options = {}) {
+			startTime = time;
+			stopTime = Infinity;
+			key = options.key || 0;
+		},
+		stop(time) {
+			stopTime = time;
+			eventSources.forEach(source => source.stop(stopTime));
+		},
 		startEvent(sound) {
 			const source = eventSources.get(sound.id);
 			if (source) {
@@ -62,20 +66,21 @@ export default function dtmf(controller) {
 				source.stopEvent(sound);
 			}
 		},
-		start(time, options = {}) {
-			startTime = time;
-			stopTime = Infinity;
-			key = options.key || 0;
+		finishEvent(soundEvent) {
+			const source = eventSources.get(soundEvent.id);
+			if (source && source.finishEvent) {
+				source.finishEvent(soundEvent);
+			}
 		},
-		stop,
-		finishEvent(sound) {
+		finish() {
 			startTime = Infinity;
 
-			const source = eventSources.get(sound.id);
-			if (source && source.finishEvent) {
-				source.finishEvent(sound);
-			}
-			eventSources.delete(sound.id);
+			eventSources.forEach(source => {
+				if (source.finish) {
+					source.finish();
+				}
+			});
+			eventSources.clear();
 		}
 	};
 }

@@ -1,6 +1,7 @@
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 import repeater from '../src/sources/repeater';
+import panner from '../src/patches/panner';
 
 document.body.insertAdjacentHTML('beforeend', require('./repeater.html'));
 
@@ -14,17 +15,26 @@ function getAudioBuffer(url) {
 		.then(buffer => soundQ.context.decodeAudioData(buffer));
 }
 
+let interval = 0.5;
+
 const audioFile = require('./audio/footstep-snow.mp3');
 getAudioBuffer(audioFile).then(buffer => {
 
-	const shot = soundQ.shot(repeater(bufferSource(buffer)));
+	const shot = soundQ.shot(repeater(bufferSource(buffer), panner, ({startTime}, shot) => {
+		// example of a patch within a repeater
+		// alternate left and right steps
+		return {
+			pan: 0.5 * (Math.round((startTime - shot.startTime) % (interval * 2)) * 2 - 1)
+		};
+	}));
 	shot.set({
-		interval: 0.5,
+		interval,
 		duration: 1
 	});
 
 	document.getElementById('interval').addEventListener('input', evt => {
-		shot.set('interval', parseFloat(evt.target.value));
+		interval = parseFloat(evt.target.value);
+		shot.set('interval', interval);
 	});
 
 	const holdButton = document.getElementById('play');

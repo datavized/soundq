@@ -11,6 +11,8 @@ Each source instance needs a `parent` object
 - point to parent source
 - set of prop values
 - parent may be a shot or it may be another source that created it
+- parent will have its own coarse-level callbacks (finish)
+- repeater should not need any event-level callbacks
 */
 
 import num from '../util/num';
@@ -34,37 +36,59 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 	return function repeater(controller) {
 
-		const submitted = new Set();
-		const sources = new Map();
+		const sources = new Set();
+		const sourcesByEvent = new Map();
 		const patches = new Map();
 		const { context } = controller;
 
 		let latestSubmittedStartTime = -Infinity;
 		let latestStartTime = -Infinity;
 		let startOptions = undefined;
+		let startTime = Infinity;
 		let releaseTime = Infinity;
+		let stopTime = Infinity;
 
-		function startPatch(patch, props, soundEvent) {
+		function startPatch(patch, props, sourceInstance, shot) {
 			const startOpts = {...props};
 			delete startOpts.duration;
 			delete startOpts.interval;
 
-			const { startTime, releaseTime, stopTime } = soundEvent;
+			const { startTime, releaseTime, stopTime } = sourceInstance;
 			patch.start(startTime, releaseTime, stopTime, Object.assign(startOpts, computeOptions(
 				patchOptions,
-				{ startTime, releaseTime, stopTime }
+				{ startTime, releaseTime, stopTime },
+				shot
 			)));
 		}
 
-		function revokeFutureSounds() {
-			submitted.forEach(id => {
-				const s = sources.get(id);
-				if (s) {
-					if (s.startTime >= releaseTime) {
-						controller.revoke(id);
-					} else {
-						latestStartTime = Math.max(latestStartTime, s.startTime);
-					}
+		function freeSourceInstance(sourceInstance) {
+			const { source } = sourceInstance;
+			if (source.finish) {
+				source.finish();
+			}
+			sources.delete(source);
+			controller.freeSource(source);
+
+			if (sourceInstance.startTime < context.currentTime) {
+				latestStartTime = Math.max(latestStartTime, sourceInstance.startTime);
+			}
+
+			// clean up patch
+			const patch = patches.get(sourceInstance);
+			if (patch) {
+				controller.freePatch(patch);
+				patches.delete(sourceInstance);
+			}
+		}
+
+		function stopFutureSounds() {
+			// stop and free any sources that haven't started yet
+			latestStartTime = Infinity;
+			sources.forEach(sourceInstance => {
+				if (sourceInstance.startTime >= releaseTime) {
+					freeSourceInstance(sourceInstance);
+				} else {
+					latestStartTime = Math.max(latestStartTime, sourceInstance.startTime);
 				}
 			});
 			latestSubmittedStartTime = Math.min(latestStartTime, latestSubmittedStartTime);
@@ -83,6 +107,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 				const skipIntervals = Math.max(1, Math.ceil(past / intervalVal));
 
 				// todo: maxTime should account for duration
+				// todo: allow for some randomness added to startTime here
 				const startTime = latestSubmittedStartTime + skipIntervals * intervalVal;
 				const maxTime = Math.min(untilTime, releaseTime);
 				if (startTime < maxTime && skipIntervals > 0) {
@@ -96,6 +121,8 @@ export default function (sourceDef, patchDef, patchOptions) {
 					const releaseTime = stopTime;
 
 					const sourceInstance = controller.getSource(sourceDef);
+					sourceInstance.shot = this.shot;
+					sourceInstance.name = 'nested!'; // temp
 
 					// optionally use a function to compute options passed to each event
 					sourceInstance.start(startTime, Object.assign(restProps, computeOptions(startOptions, {startTime, releaseTime, stopTime}, this.shot)));
@@ -105,75 +132,72 @@ export default function (sourceDef, patchDef, patchOptions) {
 					if (sourceInstance.stop) {
 						sourceInstance.stop(stopTime);
 					}
+					sources.add({
+						startTime,
+						releaseTime,
+						stopTime,
+						source: sourceInstance
+					});
+				}
 
-					const event = sourceInstance.request(untilTime);
+				let anyEventsSubmitted = false;
+				sources.forEach(sourceInstance => {
+					const event = sourceInstance.source.request(untilTime);
 					if (event) {
 						const id = controller.submit(event);
-						sources.set(id, {
-							startTime,
-							releaseTime,
-							stopTime,
-							source: sourceInstance
-						});
+						sourcesByEvent.set(id, sourceInstance);
 
-						submitted.add(id);
-						return id;
+						anyEventsSubmitted = true;
 					}
-				}
-				return 0;
+				});
+				return anyEventsSubmitted;
 			},
 			startEvent(soundEvent) {
-				const sourceInstance = sources.get(soundEvent.id);
+				const sourceInstance = sourcesByEvent.get(soundEvent.id);
+				let patch = patches.get(sourceInstance);
+				if (patchDef && !patch) {
+					patch = controller.getPatch(patchDef);
+					patches.set(sourceInstance, patch);
+					if (patch && patch.start) {
+						startPatch(patch, this.props, sourceInstance, {startTime, releaseTime, stopTime});
+					}
+
+				}
 				if (sourceInstance && sourceInstance.source.startEvent) {
 					const soundEventConfig = sourceInstance.source.startEvent(soundEvent);
-					if (patchDef) {
-						const patch = controller.getPatch(patchDef);
-						patches.set(soundEvent.id, patch);
-						if (patch && patch.start) {
-							startPatch(patch, this.props, soundEvent);
-						}
-
-						if (patch.input) {
-							soundEventConfig.output.connect(patch.input);
-							return {
-								output: patch.output
-							};
-						}
+					if (soundEventConfig && patch && patch.input) {
+						soundEventConfig.output.connect(patch.input);
+						return {
+							output: patch.output
+						};
 					}
 					return soundEventConfig;
 				}
 				return null;
 			},
 			stopEvent(soundEvent) {
-				const sourceInstance = sources.get(soundEvent.id);
+				const sourceInstance = sourcesByEvent.get(soundEvent.id);
 				if (sourceInstance && sourceInstance.source.stopEvent) {
 					const patch = patches.get(soundEvent.id);
 					if (patch && patch.start) {
-						startPatch(patch, this.props, soundEvent);
+						startPatch(patch, this.props, sourceInstance, {startTime, releaseTime, stopTime});
 					}
 
 					sourceInstance.source.stopEvent(soundEvent);
 				}
 			},
 			finishEvent(soundEvent) {
-				const sourceInstance = sources.get(soundEvent.id);
+				const sourceInstance = sourcesByEvent.get(soundEvent.id);
 				if (sourceInstance) {
-					if (sourceInstance.startTime < context.currentTime) {
-						latestStartTime = Math.max(latestStartTime, sourceInstance.startTime);
-					}
-					if (sourceInstance.source.finishEvent) {
-						sourceInstance.source.finishEvent(soundEvent);
+					const { source, stopTime } = sourceInstance;
+					if (source.finishEvent) {
+						source.finishEvent(soundEvent);
 					}
 
-					const patch = patches.get(soundEvent.id);
-					if (patch) {
-						controller.freePatch(patch);
-						patches.delete(soundEvent.id);
+					sourcesByEvent.delete(soundEvent.id);
+					if (!source.events.size && (stopTime <= context.currentTime || source.done && source.done())) {
+						freeSourceInstance(sourceInstance);
 					}
-
-					sources.delete(soundEvent.id);
-					controller.freeSource(sourceInstance.source);
-					submitted.delete(soundEvent.id);
 				}
 			},
 			set(key) {
@@ -181,14 +205,16 @@ export default function (sourceDef, patchDef, patchOptions) {
 				todo: undo most of these. they should be done in a wrapper source
 				*/
 				if (cancelProperties.indexOf(key) >= 0) {
-					revokeFutureSounds();
+					stopFutureSounds();
 					controller.schedule();
 				}
 			},
-			start(startTime, opts) {
+			start(time, opts) {
 				// start this whole thing
 				startOptions = opts;
+				startTime = time;
 				latestSubmittedStartTime = startTime - num(controller.get('interval'), DEFAULT_INTERVAL);
+				latestStartTime = latestSubmittedStartTime;
 				releaseTime = Infinity;
 			},
 			release(time) {
@@ -196,7 +222,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 				// revoke anything that hasn't started before this time
 				// release anything that has started but hasn't stopped
-				revokeFutureSounds();
+				stopFutureSounds();
 
 				sources.forEach(sourceInstance => {
 					if (sourceInstance.releaseTime > time && sourceInstance.source.release) {
@@ -208,13 +234,18 @@ export default function (sourceDef, patchDef, patchOptions) {
 				});
 			},
 			stop(time) {
-				releaseTime = time;
+				if (time < releaseTime) {
+					this.release(time);
+				}
+				stopTime = time;
 				sources.forEach(sourceInstance => {
 					if (sourceInstance.stopTime > time) {
 						sourceInstance.source.stop(time);
 					}
 				});
 				startOptions = undefined;
+			},
+			finish() {
 			}
 		};
 	};

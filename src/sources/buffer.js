@@ -16,26 +16,31 @@ export default function bufferSourceFactory(buffer) {
 		let submitted = false;
 		let startTime = Infinity;
 		let stopTime = Infinity;
-		let done = true;
 
 		let startOptions = {};
 
-		function stop(time) {
-			stopTime = time;
-			if (nodeSource) {
-				nodeSource.stop(stopTime);
-			}
-		}
-
-		function stopEvent(event) {
-			if (nodeSource) {
-				nodeSource.stopEvent(event);
-			}
-		}
-
 		return {
 			done() {
-				return done;
+				return nodeSource.done && nodeSource.done();
+			},
+			start(time, opts) {
+				startTime = time;
+				stopTime = Infinity;
+				startOptions = opts || {};
+			},
+			stop(time) {
+				stopTime = time;
+				if (nodeSource) {
+					nodeSource.stop(stopTime);
+				}
+			},
+			finish() {
+				submitted = false;
+				startTime = Infinity;
+				if (nodeSource && nodeSource.finish) {
+					nodeSource.finish();
+				}
+				nodeSource = null;
 			},
 			request(untilTime) {
 				if (untilTime > startTime && !submitted) {
@@ -46,6 +51,7 @@ export default function bufferSourceFactory(buffer) {
 
 					// create bufferSourceNode and start nodeSource
 					bufferSourceNode = context.createBufferSource();
+					bufferSourceNode.buffer = buffer;
 					bufferSourceNode.loop = loop;
 					bufferSourceNode.loopStart = loopStart;
 					bufferSourceNode.loopEnd = loopEnd;
@@ -64,26 +70,18 @@ export default function bufferSourceFactory(buffer) {
 
 				return null;
 			},
-			startEvent(sound) {
-				bufferSourceNode.buffer = buffer;
-				return nodeSource.startEvent(sound);
+			startEvent(soundEvent) {
+				return nodeSource.startEvent && nodeSource.startEvent(soundEvent) || null;
 			},
-			stopEvent,
-			start(time, opts) {
-				done = false;
-				startTime = time;
-				stopTime = Infinity;
-				startOptions = opts || {};
+			stopEvent(soundEvent) {
+				if (nodeSource) {
+					nodeSource.stopEvent(soundEvent);
+				}
 			},
-			stop,
 			finishEvent(soundEvent) {
-				done = true;
-				submitted = false;
-				startTime = Infinity;
 				if (nodeSource && nodeSource.finishEvent) {
 					nodeSource.finishEvent(soundEvent);
 				}
-				nodeSource = null;
 			}
 		};
 	};

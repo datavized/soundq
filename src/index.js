@@ -138,8 +138,8 @@ function SoundQ(options = {}) {
 			releaseTime,
 			stopTime
 		} = source;
-		if (patch && patch.start) {
-			// todo: compute patch options if there are any functions
+		if (patch && patch.start && stopTime > context.currentTime) {
+			// compute patch options if there are any functions
 			patch.start(startTime, releaseTime, stopTime, computeOptions(
 				patchOptions,
 				{ startTime, releaseTime, stopTime }
@@ -154,18 +154,19 @@ function SoundQ(options = {}) {
 			sound.scheduled = true;
 		}
 
-		if (shot.patchDef && !shot.patch) {
-			shot.patch = getPatch(shot.patchDef);
+		if (shot) {
+			if (shot.patchDef && !shot.patch) {
+				shot.patch = getPatch(shot.patchDef);
+			}
+			updatePatch(shot);
 		}
-		// todo: pass in patch options
-		updatePatch(shot);
 
 		// todo: use optional output destination
 		if (sound.output && sound.output.connect) {
-			const dest = shot.patch && shot.patch.input || context.destination;
+			const dest = shot && shot.patch && shot.patch.input || context.destination;
 			sound.output.connect(dest);
 
-			if (shot.patch && shot.patch.output) {
+			if (shot && shot.patch && shot.patch.output) {
 				shot.patch.output.connect(context.destination);
 			}
 		}
@@ -319,7 +320,7 @@ function SoundQ(options = {}) {
 
 	function stop(id, stopTime) {
 		const sound = soundEvents.get(id);
-		if (id && sound.stopTime !== stopTime) {
+		if (sound && sound.stopTime !== stopTime) {
 			sound.stopTime = stopTime;
 			if (sound.scheduled) {
 				if (sound.source.stopEvent) {

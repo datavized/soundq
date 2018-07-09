@@ -16,7 +16,7 @@ export default context => {
 			it and would result in a more pronounced effect.
 			*/
 			const randomPan = (Math.random() - 0.5) * 2 * (panSpread || 0);
-			const panVal = Math.max(0, Math.min(1, (pan || 0) + randomPan));
+			const panVal = Math.max(-1, Math.min(1, (pan || 0) + randomPan));
 			panner.pan.setValueAtTime(panVal, startTime);
 		}
 	};
