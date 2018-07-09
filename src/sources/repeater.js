@@ -86,7 +86,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 			latestStartTime = Infinity;
 			sources.forEach(sourceInstance => {
 				if (sourceInstance.startTime >= releaseTime) {
-					freeSourceInstance(sourceInstance);
+					sourceInstance.source.stop(releaseTime);
 				} else {
 					latestStartTime = Math.max(latestStartTime, sourceInstance.startTime);
 				}

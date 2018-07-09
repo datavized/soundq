@@ -21,7 +21,7 @@ export default function bufferSourceFactory(buffer) {
 
 		return {
 			done() {
-				return nodeSource.done && nodeSource.done();
+				return !nodeSource || nodeSource.done && nodeSource.done();
 			},
 			start(time, opts) {
 				startTime = time;
