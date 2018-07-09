@@ -18,8 +18,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "event-emitter": "^0.3.5",
-    "ios-safe-audio-context": "^1.0.1",
-    "soundbank-pitch-shift": "^1.0.3"
+    "ios-safe-audio-context": "^1.0.1"
   },
   "devDependencies": {
     "autoprefixer": "^8.6.4",
