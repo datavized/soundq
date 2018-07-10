@@ -143,12 +143,11 @@ export default function (sourceDef, patchDef, patchOptions) {
 				let anyEventsSubmitted = false;
 				sources.forEach(sourceInstance => {
 					const event = sourceInstance.source.request(untilTime);
-					if (event) {
+					if (event && typeof event === 'object') {
 						const id = controller.submit(event);
 						sourcesByEvent.set(id, sourceInstance);
-
-						anyEventsSubmitted = true;
 					}
+					anyEventsSubmitted = anyEventsSubmitted || !!event;
 				});
 				return anyEventsSubmitted;
 			},
