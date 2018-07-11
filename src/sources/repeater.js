@@ -54,6 +54,9 @@ export default function (sourceDef, patchDef, patchOptions) {
 			delete startOpts.interval;
 
 			const { startTime, releaseTime, stopTime } = sourceRef;
+			/*
+			todo: pass sourceRef index to options
+			*/
 			patch.start(startTime, releaseTime, stopTime, Object.assign(startOpts, computeOptions(
 				patchOptions,
 				{ startTime, releaseTime, stopTime },
@@ -148,6 +151,12 @@ export default function (sourceDef, patchDef, patchOptions) {
 					};
 
 					// optionally use a function to compute options passed to each event
+					/*
+					todo: pass sourceRef index to options
+					- track count index of played events
+					- track and reset alongside latestStartTime
+					- this should keep things aligned if tempo changes mid-stream
+					*/
 					source.start(eventStartTime, Object.assign(restProps, computeOptions(startOptions, sourceRef, this.shot)));
 					if (source.release) {
 						source.release(eventReleaseTime);
@@ -270,13 +279,13 @@ export default function (sourceDef, patchDef, patchOptions) {
 						sourceRef.source.stop(time);
 					}
 				});
-				startOptions = undefined;
 			},
 			finish() {
 				startTime = Infinity;
 				releaseTime = Infinity;
 				stopTime = Infinity;
 				lastCompletedStartTime = -Infinity;
+				startOptions = undefined;
 				stopFutureSounds(0);
 			},
 			destroy() {
