@@ -691,6 +691,10 @@ function SoundQ(options = {}) {
 		return shot;
 	};
 
+	this.stop = time => {
+		allShots.forEach(s => s.stop(time));
+	};
+
 	this.destroy = () => {
 		destroyed = true;
 

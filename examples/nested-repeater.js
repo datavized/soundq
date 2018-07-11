@@ -54,7 +54,9 @@ getAudioBuffer(audioFile).then(buffer => {
 	}
 
 	holdButton.addEventListener('mousedown', start);
-	holdButton.addEventListener('mouseup', stop);
+	holdButton.addEventListener('mouseup', () => {
+		shot.release();
+	});
 
 	holdButton.addEventListener('touchstart', evt => {
 		if (evt.touches.length === 1) {
@@ -63,7 +65,7 @@ getAudioBuffer(audioFile).then(buffer => {
 	});
 	holdButton.addEventListener('touchend', evt => {
 		if (evt.touches.length === 0) {
-			stop();
+			shot.release();
 		}
 	});
 

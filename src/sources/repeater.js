@@ -80,6 +80,19 @@ export default function (sourceDef, patchDef, patchOptions) {
 			}
 		}
 
+		function stopSound(sourceRef, time) {
+			sourceRef.startTime = time;
+			sourceRef.releaseTime = time;
+			sourceRef.stopTime = time;
+			if (sourceRef.source.stop) {
+				sourceRef.source.stop(time);
+			}
+
+			sourceRef.events.forEach(id => {
+				controller.revoke(id);
+			});
+		}
+
 		function stopFutureSounds(time) {
 			// stop and free any sources that haven't started yet
 
@@ -102,18 +115,14 @@ export default function (sourceDef, patchDef, patchOptions) {
 			}
 
 			stoppableRefs.forEach(sourceRef => {
-				sourceRef.startTime = time;
-				sourceRef.releaseTime = time;
-				sourceRef.stopTime = time;
-				sourceRef.source.stop(time);
-
-				sourceRef.events.forEach(id => {
-					controller.revoke(id);
-				});
+				stopSound(sourceRef, time);
 			});
 		}
 
 		return {
+			done() {
+				return context.currentTime >= releaseTime && !sourceRefs.size;
+			},
 			request(untilTime) {
 				const {
 					duration,
@@ -170,7 +179,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 				let anyEventsSubmitted = false;
 				sourceRefs.forEach(sourceRef => {
-					if (sourceRef.startTime <= untilTime && sourceRef.stopTime > context.currentTime) {
+					if (sourceRef.startTime <= maxTime && sourceRef.stopTime > context.currentTime) {
 						const event = sourceRef.source.request(untilTime);
 						if (event && typeof event === 'object') {
 							const id = controller.submit(event);
@@ -263,20 +272,19 @@ export default function (sourceDef, patchDef, patchOptions) {
 					if (sourceRef.releaseTime > time && sourceRef.source.release) {
 						sourceRef.source.release(time);
 					}
-					if (sourceRef.startTime > time && sourceRef.source.stop) {
-						sourceRef.source.stop(time);
+					if (sourceRef.startTime > time) {
+						stopSound(sourceRef, time);
 					}
 				});
 			},
 			stop(time) {
 				if (time < releaseTime) {
-					this.release(time);
+					releaseTime = time;
 				}
 				stopTime = time;
-				stopFutureSounds(stopTime);
 				sourceRefs.forEach(sourceRef => {
-					if (sourceRef.stopTime > time) {
-						sourceRef.source.stop(time);
+					if (sourceRef.stopTime > stopTime) {
+						stopSound(sourceRef, stopTime);
 					}
 				});
 			},
@@ -284,9 +292,9 @@ export default function (sourceDef, patchDef, patchOptions) {
 				startTime = Infinity;
 				releaseTime = Infinity;
 				stopTime = Infinity;
+				stopFutureSounds(0);
 				lastCompletedStartTime = -Infinity;
 				startOptions = undefined;
-				stopFutureSounds(0);
 			},
 			destroy() {
 				this.finish();
