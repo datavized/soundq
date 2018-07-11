@@ -48,7 +48,7 @@ const defaultLayerOptions = {
 	hold: 0,
 	length: 0.3,
 	transpose: 1,
-	spread: 0.2,
+	spread: 0,
 	panSpread: 0.25
 };
 
@@ -67,9 +67,7 @@ const controlDefs = [
 		max: 50, // every 1/50th of a second
 		val: 40,
 		cb: (val, layer) => {
-			if (layer.granularShot) {
-				layer.granularShot.interval = 1 / val;
-			}
+			layer.grainOptions.interval = 1 / val;
 		}
 	},
 	{
@@ -125,10 +123,21 @@ const controlDefs = [
 const layers = [
 	// low
 	{
+		rate: 0.25,
+		opts: {
+			length: 1.8,
+			crossFade: 0.9,
+			attack: 0.1 * 0.4,
+			release: 0.9 * 1.5,
+			pitch: -12,
+			spread: 0
+		}
+	},
+	{
 		rate: 1,
 		opts: {
 			length: 1.4,
-			crossFade: 0.1,
+			crossFade: 0.7,
 			attack: 0.1 * 0.4,
 			release: 0.9 * 1.5,
 			pitch: -12
@@ -138,7 +147,7 @@ const layers = [
 		rate: 2,
 		opts: {
 			length: 0.47,
-			crossFade: 0.05,
+			crossFade: 0.33,
 			attack: 0.05 * 0.4,
 			release: 0.3 * 1.5,
 			pitch: -12
@@ -148,10 +157,10 @@ const layers = [
 		rate: 4,
 		opts: {
 			length: 0.08,
-			crossFade: 0.05,
+			crossFade: 0.25,
 			attack: 0.01 * 0.4,
 			release: 0.05 * 1.5,
-			pitch: -12
+			pitch: -5
 		}
 	},
 
@@ -160,7 +169,7 @@ const layers = [
 		rate: 1,
 		opts: {
 			length: 2.5,
-			crossFade: 0.03,
+			crossFade: 0.1,
 			attack: 0.1 * 0.4,
 			release: 1.6 * 1.5,
 			pitch: 0
@@ -170,7 +179,7 @@ const layers = [
 		rate: 2,
 		opts: {
 			length: 0.47,
-			crossFade: 0.045,
+			crossFade: 0.1,
 			attack: 0.05 * 0.4,
 			release: 0.3 * 1.5,
 			pitch: 0
@@ -180,10 +189,10 @@ const layers = [
 		rate: 4,
 		opts: {
 			length: 0.15,
-			crossFade: 0.025,
+			crossFade: 0.1,
 			attack: 0.01 * 0.4,
 			release: 0.1 * 1.5,
-			pitch: 0
+			pitch: 7
 		}
 	},
 
@@ -192,7 +201,7 @@ const layers = [
 		rate: 4,
 		opts: {
 			length: 0.15,
-			crossFade: 0.025,
+			crossFade: 0.09,
 			attack: 0.01 * 0.4,
 			release: 0.1 * 1.5,
 			pitch: 12
@@ -250,7 +259,7 @@ function buildControls(layer) {
 	});
 
 	const start = () => {
-		layer.shot.start(audioContext.currentTime, layer.bufferSourceOptions, layer.grainPatchOptions);//, audioContext.currentTime + 10);
+		layer.shot.start(audioContext.currentTime, layer.bufferSourceOptions);//, audioContext.currentTime + 10);
 	};
 
 	const stop = () => {
@@ -328,7 +337,9 @@ function loadedBuffer(buffer) {
 
 		function bufferSourceOptions({startTime}, shot) {
 			const index = Math.round((startTime - shot.startTime) / beatInterval) % seq.length;
+			const gro = grainRepeatOptions();
 			return {
+				...gro,
 				offset: seq[index],
 				playbackRate: grainOptions.transpose
 			};
