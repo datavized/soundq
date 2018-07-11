@@ -1,3 +1,8 @@
+import num from '../util/num';
+
+const DEFAULT_AMPLITUDE = 1;
+const DEFAULT_CROSSFADE = 0.1;
+
 export default function trapezoid(context) {
 	const gain = context.createGain();
 	gain.gain.value = 0;
@@ -8,10 +13,8 @@ export default function trapezoid(context) {
 	return {
 		node: gain,
 		start(startTime, releaseTime, stopTime, options = {}) {
-			const {
-				amplitude,
-				crossFade // time in seconds
-			} = options;
+			const amplitude = num(options.amplitude, DEFAULT_AMPLITUDE); // value
+			const crossFade = num(options.crossFade, DEFAULT_CROSSFADE); // time in seconds
 
 			const length = stopTime - startTime;
 			const fadeDuration = Math.min(Math.max(crossFade, minFadeDuration), length / 2);
