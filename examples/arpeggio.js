@@ -46,7 +46,7 @@ const shot = soundQ.shot(repeater(oscillator, gainEnvelope, {
 const button = document.getElementById('play');
 button.addEventListener('mousedown', () => {
 	shot.start(0, ({startTime}, shot) => {
-		const note = notes[Math.floor((startTime - shot.startTime) / interval) % notes.length];
+		const note = notes[Math.round((startTime - shot.startTime) / interval) % notes.length];
 		const frequency = freq(note);
 		return {
 			frequency
