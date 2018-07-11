@@ -33,7 +33,11 @@ const soundQ = new SoundQ({
 	cacheExpiration: 2
 });
 
-const shot = soundQ.shot(repeater(oscillator, gainEnvelope))
+const shot = soundQ.shot(repeater(oscillator, gainEnvelope, {
+	attack: 0.08,
+	decay: 0.1,
+	release: 0.2
+}))
 	.set({
 		interval,
 		duration
@@ -41,8 +45,12 @@ const shot = soundQ.shot(repeater(oscillator, gainEnvelope))
 
 const button = document.getElementById('play');
 button.addEventListener('mousedown', () => {
-	shot.start(0, ({startTime}, shot) => ({
-		frequency: freq(notes[Math.floor((startTime - shot.startTime) / interval) % notes.length])
-	}));
+	shot.start(0, ({startTime}, shot) => {
+		const note = notes[Math.floor((startTime - shot.startTime) / interval) % notes.length];
+		const frequency = freq(note);
+		return {
+			frequency
+		};
+	});
 });
 button.addEventListener('mouseup', () => shot.release(0));

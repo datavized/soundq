@@ -202,13 +202,14 @@ function SoundQ(options = {}) {
 			}
 		});
 
-
+		let untilTime = Infinity;
 		liveShots.forEach(shot => {
 			const { source } = shot;
 			if (source.request && shot.stopTime > context.currentTime) {
 				let event = null;
 				do {
-					event = source.request(earliestStopTime + MIN_LOOK_AHEAD);
+					untilTime = Math.min(untilTime, earliestStopTime + MIN_LOOK_AHEAD);
+					event = source.request(untilTime);
 					if (event && typeof event === 'object') {
 						source.controller.submit(event);
 						earliestStopTime = Math.min(earliestStopTime, event.stopTime);
@@ -242,7 +243,7 @@ function SoundQ(options = {}) {
 			note that the time between NOW and startTime should be less than min latency...
 			Use the time between the FIRST stopTime of scheduled sound and startTime.
 			*/
-			if (sound.stopTime > context.currentTime) {
+			if (sound.stopTime > Math.max(context.currentTime, sound.startTime)) {
 				startSoundEvent(sound);
 			} else {
 				// we missed one!
@@ -256,9 +257,9 @@ function SoundQ(options = {}) {
 	function calculateEarliestStopTime() {
 		earliestStopTime = Infinity;
 		for (let i = 0; i < playedSounds.length; i++) {
-			const st = playedSounds[i].stopTime;
-			if (st > context.currentTime) {
-				earliestStopTime = st;
+			const {startTime, stopTime} = playedSounds[i];
+			if (stopTime > context.currentTime && stopTime > startTime) {
+				earliestStopTime = stopTime;
 				break;
 			}
 		}

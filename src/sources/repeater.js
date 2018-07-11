@@ -36,24 +36,24 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 	return function repeater(controller) {
 
-		const sources = new Set();
-		const sourcesByEvent = new Map();
+		const sourceRefs = new Set();
+		const sourceRefsByEvent = new Map();
 		const patches = new Map();
 		const { context } = controller;
 
-		let latestSubmittedStartTime = -Infinity;
 		let latestStartTime = -Infinity;
+		let lastCompletedStartTime = -Infinity;
 		let startOptions = undefined;
 		let startTime = Infinity;
 		let releaseTime = Infinity;
 		let stopTime = Infinity;
 
-		function startPatch(patch, props, sourceInstance, shot) {
+		function startPatch(patch, props, sourceRef, shot) {
 			const startOpts = {...props};
 			delete startOpts.duration;
 			delete startOpts.interval;
 
-			const { startTime, releaseTime, stopTime } = sourceInstance;
+			const { startTime, releaseTime, stopTime } = sourceRef;
 			patch.start(startTime, releaseTime, stopTime, Object.assign(startOpts, computeOptions(
 				patchOptions,
 				{ startTime, releaseTime, stopTime },
@@ -61,37 +61,53 @@ export default function (sourceDef, patchDef, patchOptions) {
 			)));
 		}
 
-		function freeSourceInstance(sourceInstance) {
-			const { source } = sourceInstance;
+		function freeSourceRef(sourceRef) {
+			const { source } = sourceRef;
 			if (source.finish) {
 				source.finish();
 			}
-			sources.delete(source);
+			sourceRefs.delete(sourceRef);
 			controller.freeSource(source);
 
-			if (sourceInstance.startTime < context.currentTime) {
-				latestStartTime = Math.max(latestStartTime, sourceInstance.startTime);
-			}
-
 			// clean up patch
-			const patch = patches.get(sourceInstance);
+			const patch = patches.get(sourceRef);
 			if (patch) {
 				controller.freePatch(patch);
-				patches.delete(sourceInstance);
+				patches.delete(sourceRef);
 			}
 		}
 
-		function stopFutureSounds() {
+		function stopFutureSounds(time) {
 			// stop and free any sources that haven't started yet
-			latestStartTime = Infinity;
-			sources.forEach(sourceInstance => {
-				if (sourceInstance.startTime >= releaseTime) {
-					sourceInstance.source.stop(releaseTime);
+
+			// need to recalculate latestStartTime, since next intervals may
+			// be added before we're done cleaning up
+			let minStartTime = -Infinity;
+			const stoppableRefs = new Set();
+			sourceRefs.forEach(sourceRef => {
+				if (sourceRef.startTime < time) {
+					minStartTime = Math.max(latestStartTime, sourceRef.startTime);
 				} else {
-					latestStartTime = Math.max(latestStartTime, sourceInstance.startTime);
+					stoppableRefs.add(sourceRef);
 				}
 			});
-			latestSubmittedStartTime = Math.min(latestStartTime, latestSubmittedStartTime);
+
+			if (minStartTime > 0) {
+				latestStartTime = minStartTime;
+			} else {
+				latestStartTime = lastCompletedStartTime;
+			}
+
+			stoppableRefs.forEach(sourceRef => {
+				sourceRef.startTime = time;
+				sourceRef.releaseTime = time;
+				sourceRef.stopTime = time;
+				sourceRef.source.stop(time);
+
+				sourceRef.events.forEach(id => {
+					controller.revoke(id);
+				});
+			});
 		}
 
 		return {
@@ -103,67 +119,75 @@ export default function (sourceDef, patchDef, patchOptions) {
 				} = this.props;
 
 				const intervalVal = num(interval, DEFAULT_INTERVAL);
-				const past = context.currentTime - latestSubmittedStartTime;
+				const past = context.currentTime - latestStartTime;
 				const skipIntervals = Math.max(1, Math.ceil(past / intervalVal));
 
 				// todo: maxTime should account for duration
 				// todo: allow for some randomness added to startTime here
-				const startTime = latestSubmittedStartTime + skipIntervals * intervalVal;
-				const maxTime = Math.min(untilTime, releaseTime);
-				if (startTime < maxTime && skipIntervals > 0) {
+				const eventStartTime = latestStartTime + skipIntervals * intervalVal;
+				const maxTime = Math.min(untilTime, releaseTime, stopTime);
+				if (eventStartTime < maxTime) {
 
-					latestSubmittedStartTime = startTime;
+					latestStartTime = eventStartTime;
 
 					// each event has start, release (Infinity?) and stop(Infinity?) time
 					// todo: get release from options?
 
-					const stopTime = startTime + num(duration, DEFAULT_DURATION);
-					const releaseTime = stopTime;
+					const eventStopTime = eventStartTime + num(duration, DEFAULT_DURATION);
+					const eventReleaseTime = eventStopTime;
 
-					const sourceInstance = controller.getSource(sourceDef);
-					sourceInstance.shot = this.shot;
-					sourceInstance.name = 'nested!'; // temp
+					const source = controller.getSource(sourceDef);
+					source.shot = this.shot;
+
+					const sourceRef = {
+						startTime: eventStartTime,
+						releaseTime: eventReleaseTime,
+						stopTime: eventStopTime,
+						source,
+						events: new Set()
+					};
 
 					// optionally use a function to compute options passed to each event
-					sourceInstance.start(startTime, Object.assign(restProps, computeOptions(startOptions, {startTime, releaseTime, stopTime}, this.shot)));
-					if (sourceInstance.release) {
-						sourceInstance.release(releaseTime);
+					source.start(eventStartTime, Object.assign(restProps, computeOptions(startOptions, sourceRef, this.shot)));
+					if (source.release) {
+						source.release(eventReleaseTime);
 					}
-					if (sourceInstance.stop) {
-						sourceInstance.stop(stopTime);
+					if (source.stop) {
+						source.stop(eventStopTime);
 					}
-					sources.add({
-						startTime,
-						releaseTime,
-						stopTime,
-						source: sourceInstance
-					});
+
+					sourceRefs.add(sourceRef);
 				}
 
 				let anyEventsSubmitted = false;
-				sources.forEach(sourceInstance => {
-					const event = sourceInstance.source.request(untilTime);
-					if (event && typeof event === 'object') {
-						const id = controller.submit(event);
-						sourcesByEvent.set(id, sourceInstance);
+				sourceRefs.forEach(sourceRef => {
+					if (sourceRef.startTime <= untilTime && sourceRef.stopTime > context.currentTime) {
+						const event = sourceRef.source.request(untilTime);
+						if (event && typeof event === 'object') {
+							const id = controller.submit(event);
+							sourceRefsByEvent.set(id, sourceRef);
+							sourceRef.events.add(id);
+						}
+
+						anyEventsSubmitted = anyEventsSubmitted || !!event;
 					}
-					anyEventsSubmitted = anyEventsSubmitted || !!event;
 				});
 				return anyEventsSubmitted;
 			},
 			startEvent(soundEvent) {
-				const sourceInstance = sourcesByEvent.get(soundEvent.id);
-				let patch = patches.get(sourceInstance);
+				const sourceRef = sourceRefsByEvent.get(soundEvent.id);
+
+				let patch = patches.get(sourceRef);
 				if (patchDef && !patch) {
 					patch = controller.getPatch(patchDef);
-					patches.set(sourceInstance, patch);
+					patches.set(sourceRef, patch);
 					if (patch && patch.start) {
-						startPatch(patch, this.props, sourceInstance, {startTime, releaseTime, stopTime});
+						startPatch(patch, this.props, sourceRef, {startTime, releaseTime, stopTime});
 					}
 
 				}
-				if (sourceInstance && sourceInstance.source.startEvent) {
-					const soundEventConfig = sourceInstance.source.startEvent(soundEvent);
+				if (sourceRef && sourceRef.source.startEvent) {
+					const soundEventConfig = sourceRef.source.startEvent(soundEvent);
 					if (soundEventConfig && patch && patch.input) {
 						soundEventConfig.output.connect(patch.input);
 						return {
@@ -175,27 +199,30 @@ export default function (sourceDef, patchDef, patchOptions) {
 				return null;
 			},
 			stopEvent(soundEvent) {
-				const sourceInstance = sourcesByEvent.get(soundEvent.id);
-				if (sourceInstance && sourceInstance.source.stopEvent) {
+				const sourceRef = sourceRefsByEvent.get(soundEvent.id);
+				if (sourceRef && sourceRef.source.stopEvent) {
 					const patch = patches.get(soundEvent.id);
 					if (patch && patch.start) {
-						startPatch(patch, this.props, sourceInstance, {startTime, releaseTime, stopTime});
+						startPatch(patch, this.props, sourceRef, {startTime, releaseTime, stopTime});
 					}
 
-					sourceInstance.source.stopEvent(soundEvent);
+					sourceRef.source.stopEvent(soundEvent);
 				}
 			},
 			finishEvent(soundEvent) {
-				const sourceInstance = sourcesByEvent.get(soundEvent.id);
-				if (sourceInstance) {
-					const { source, stopTime } = sourceInstance;
+				const sourceRef = sourceRefsByEvent.get(soundEvent.id);
+				if (sourceRef) {
+					const { source, startTime, stopTime } = sourceRef;
 					if (source.finishEvent) {
 						source.finishEvent(soundEvent);
 					}
 
-					sourcesByEvent.delete(soundEvent.id);
+					lastCompletedStartTime = Math.max(startTime, lastCompletedStartTime);
+
+					sourceRef.events.delete(soundEvent.id);
+					sourceRefsByEvent.delete(soundEvent.id);
 					if (!source.events.size && (stopTime <= context.currentTime || source.done && source.done())) {
-						freeSourceInstance(sourceInstance);
+						freeSourceRef(sourceRef);
 					}
 				}
 			},
@@ -203,8 +230,8 @@ export default function (sourceDef, patchDef, patchOptions) {
 				/*
 				todo: undo most of these. they should be done in a wrapper source
 				*/
-				if (cancelProperties.indexOf(key) >= 0) {
-					stopFutureSounds();
+				if (startTime < Infinity && cancelProperties.indexOf(key) >= 0) {
+					stopFutureSounds(context.currentTime);
 					controller.schedule();
 				}
 			},
@@ -212,23 +239,23 @@ export default function (sourceDef, patchDef, patchOptions) {
 				// start this whole thing
 				startOptions = opts;
 				startTime = time;
-				latestSubmittedStartTime = startTime - num(controller.get('interval'), DEFAULT_INTERVAL);
-				latestStartTime = latestSubmittedStartTime;
+				latestStartTime = startTime - num(controller.get('interval'), DEFAULT_INTERVAL);
+				lastCompletedStartTime = latestStartTime;
 				releaseTime = Infinity;
 			},
 			release(time) {
 				releaseTime = time;
 
 				// revoke anything that hasn't started before this time
-				// release anything that has started but hasn't stopped
-				stopFutureSounds();
+				stopFutureSounds(releaseTime);
 
-				sources.forEach(sourceInstance => {
-					if (sourceInstance.releaseTime > time && sourceInstance.source.release) {
-						sourceInstance.source.release(time);
+				// release anything that has started but hasn't stopped
+				sourceRefs.forEach(sourceRef => {
+					if (sourceRef.releaseTime > time && sourceRef.source.release) {
+						sourceRef.source.release(time);
 					}
-					if (sourceInstance.startTime > time && sourceInstance.source.stop) {
-						sourceInstance.source.stop(time);
+					if (sourceRef.startTime > time && sourceRef.source.stop) {
+						sourceRef.source.stop(time);
 					}
 				});
 			},
@@ -237,14 +264,23 @@ export default function (sourceDef, patchDef, patchOptions) {
 					this.release(time);
 				}
 				stopTime = time;
-				sources.forEach(sourceInstance => {
-					if (sourceInstance.stopTime > time) {
-						sourceInstance.source.stop(time);
+				stopFutureSounds(stopTime);
+				sourceRefs.forEach(sourceRef => {
+					if (sourceRef.stopTime > time) {
+						sourceRef.source.stop(time);
 					}
 				});
 				startOptions = undefined;
 			},
 			finish() {
+				startTime = Infinity;
+				releaseTime = Infinity;
+				stopTime = Infinity;
+				lastCompletedStartTime = -Infinity;
+				stopFutureSounds(0);
+			},
+			destroy() {
+				this.finish();
 			}
 		};
 	};

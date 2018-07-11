@@ -19,6 +19,10 @@ export default function gainEnvelope(context) {
 				stopTime = stop;
 				options = opts;
 
+				const now = context.currentTime;
+				if (stopTime < now) {
+					console.log('envelope starting late', now, stopTime);
+				}
 				gain.cancelScheduledValues(context.currentTime);
 				applyEnvelope(gain, startTime, releaseTime, stopTime, options);
 			}

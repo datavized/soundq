@@ -10,6 +10,7 @@ export default function (node) {
 		let startTime = Infinity;
 		let stopTime = Infinity;
 		let offset = 0;
+		let done = false;
 
 		function stop(time) {
 			stopTime = time;
@@ -21,6 +22,7 @@ export default function (node) {
 		}
 
 		function ended() {
+			done = true;
 			node.onended = null;
 			controller.revoke(eventId);
 		}
@@ -28,10 +30,16 @@ export default function (node) {
 		function stopEvent({ stopTime }) {
 			if (started) {
 				node.stop(stopTime);
+			} else if (submitted) {
+				console.log('stopping submitted (but not started) event');
+				controller.revoke(eventId);
 			}
 		}
 
 		return {
+			done() {
+				return done;
+			},
 			expired() {
 				return submitted;
 			},

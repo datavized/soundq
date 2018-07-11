@@ -36,7 +36,6 @@ export default function applyEnvelope(param, startTime = 0, releaseTime = Infini
 	}
 
 	if (stopTime < Infinity) {
-		// const endTime = startReleaseTime + release * playbackRate;
 		param.linearRampToValueAtTime(0, stopTime);
 	}
 }
