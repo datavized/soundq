@@ -46,11 +46,11 @@ getAudioBuffer(audioFile).then(buffer => {
 	stopButton.disabled = false;
 
 	function stop() {
-		shot.stop();
+		shot.release();
 	}
 
 	function start() {
-		stop();
+		shot.stop();
 		shot.start();
 	}
 

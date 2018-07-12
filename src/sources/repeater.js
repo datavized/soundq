@@ -121,7 +121,8 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 		return {
 			done() {
-				return context.currentTime >= releaseTime && !sourceRefs.size;
+				const done = context.currentTime >= releaseTime && !sourceRefs.size;
+				return done;
 			},
 			request(untilTime) {
 				const {

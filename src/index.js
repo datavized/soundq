@@ -288,14 +288,11 @@ function SoundQ(options = {}) {
 
 			soundEvents.delete(eventId);
 			source.events.delete(sound);
-			// todo: fire stop event
+			shot.source.events.delete(sound);
+			// todo: fire sound stop event
 
-			/*
-			todo: if released and no more events scheduled:
-			- fire an event
-			- possibly (optionally?) stop the shot
-			*/
-			if (!source.events.size && (shot.stopTime <= context.currentTime || source.done && source.done())) {
+			if (shot && !source.events.size && !shot.source.events.size && (shot.stopTime <= context.currentTime || shot.source.done && shot.source.done())) {
+				// todo: fire shot stop event
 				liveShots.delete(shot.id);
 
 				if (source.finish) {
