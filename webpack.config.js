@@ -30,7 +30,7 @@ const examples = fs.readdirSync(examplesDirectory)
 
 // configuration
 const eslintConfig = require('./.eslintrc.js');
-const port = '9000';
+const port = '9900';
 const host = 'localhost';
 const browsers = [
 	'>1%',
