@@ -545,7 +545,7 @@ function SoundQ(options = {}) {
 		let pool = patchPools.get(patch.definition);
 		if (!pool) {
 			pool = [];
-			sourcePools.set(patch.definition, pool);
+			patchPools.set(patch.definition, pool);
 		}
 
 		// store timestamp for pruning later
