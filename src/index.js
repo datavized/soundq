@@ -472,7 +472,10 @@ function SoundQ(options = {}) {
 	}
 
 	function freeSource(source) {
-		if (source.expired && source.expired()) {
+		const expired = typeof source.expired === 'function' ?
+			source.expired() :
+			!!source.expired;
+		if (expired) {
 			/*
 			Some sources cannot be re-used (e.g. AudioScheduledSourceNode),
 			so destroy them rather than adding back to the pool.
@@ -506,11 +509,11 @@ function SoundQ(options = {}) {
 		patch.definition = definition;
 		patch.lastUsed = Number.MAX_SAFE_INTEGER;
 
-		if (!patch.input) {
-			patch.input = patch.output || patch.node;
+		if (patch.input === undefined) {
+			patch.input = patch.node;
 		}
-		if (!patch.output) {
-			patch.output = patch.input || patch.node;
+		if (!patch.output === undefined) {
+			patch.output = patch.node;
 		}
 
 		return patch;
@@ -525,6 +528,17 @@ function SoundQ(options = {}) {
 		}
 		if (patch.output) {
 			patch.output.disconnect();
+		}
+
+		const expired = typeof patch.expired === 'function' ?
+			patch.expired() :
+			!!patch.expired;
+
+		if (expired) {
+			if (patch.destroy) {
+				patch.destroy();
+			}
+			return;
 		}
 
 		// return it to the pool

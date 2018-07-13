@@ -1,10 +1,3 @@
-/*
-todo:
-- find a way to adjust duration going forward
-  e.g. cut it short for grains
-- set default options
-*/
-
 export default function compose(definitions) {
 	return context => {
 		const patches = definitions.map(def => def(context));

@@ -49,6 +49,10 @@ export default function (sourceDef, patchDef, patchOptions) {
 		let stopTime = Infinity;
 
 		function startPatch(patch, props, sourceRef, shot) {
+			if (!patch.start) {
+				return;
+			}
+
 			const startOpts = {...props};
 			delete startOpts.duration;
 			delete startOpts.interval;
