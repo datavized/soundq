@@ -415,7 +415,7 @@ function SoundQ(options = {}) {
 
 		const set = source.set;
 		source.set = (key, val) => {
-			if (!source.shot) {
+			if (!source.shot || source.shot.props !== source.props) {
 				source.props[key] = val;
 			}
 			if (set) {

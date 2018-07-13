@@ -67,14 +67,17 @@ const controlDefs = [
 		max: 50, // every 1/50th of a second
 		val: 40,
 		cb: (val, layer) => {
-			layer.grainOptions.interval = 1 / val;
+			layer.shot.set('source.interval', 1 / val);
 		}
 	},
 	{
 		key: 'length',
 		name: 'Grain Length',
 		min: 0.01,
-		max: 2
+		max: 2,
+		cb: (val, layer) => {
+			layer.shot.set('source.duration', val);
+		}
 	},
 	{
 		key: 'spread',
@@ -201,7 +204,7 @@ const layers = [
 		rate: 4,
 		opts: {
 			length: 0.15,
-			crossFade: 0.09,
+			crossFade: 0.1,
 			attack: 0.01 * 0.4,
 			release: 0.1 * 1.5,
 			pitch: 12
@@ -303,8 +306,6 @@ function loadedBuffer(buffer) {
 			seq.push(random() * buffer.duration);
 		}
 
-		buildControls(layer);
-
 		/*
 		todo: separate out options
 		- sequence repeater options
@@ -320,13 +321,6 @@ function loadedBuffer(buffer) {
 			- panner: panSpread
 			- trapezoid: amplitude, crossFade
 		*/
-
-		function sequenceOptions() {
-			return {
-				interval: beatInterval,
-				duration: beatDuration
-			};
-		}
 
 		function grainRepeatOptions() {
 			return {
@@ -358,6 +352,8 @@ function loadedBuffer(buffer) {
 			.set({
 				interval: beatInterval,
 				duration: beatDuration,
+				'source.interval': grainOptions.interval,
+				'source.duration': grainOptions.length,
 				random: 0.0005 // just enough to humanize?
 			});
 		shots.push(shot);
@@ -381,9 +377,10 @@ function loadedBuffer(buffer) {
 
 		Object.assign(layer, {
 			shot,
-			bufferSourceOptions,
-			grainRepeatOptions
+			bufferSourceOptions
 		});
+
+		buildControls(layer);
 	});
 }
 

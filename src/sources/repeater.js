@@ -21,6 +21,8 @@ import computeOptions from '../util/computeOptions';
 const DEFAULT_INTERVAL = 0.1;
 const DEFAULT_DURATION = 1;
 const cancelProperties = ['interval', 'duration', 'playbackRate'];
+const SUB_PROPS_PREFIX = 'source.';
+const SUB_PROPS_LEN = SUB_PROPS_PREFIX.length;
 
 /*
 todo: find a better place to pass patchOptions
@@ -164,6 +166,14 @@ export default function (sourceDef, patchDef, patchOptions) {
 						events: new Set()
 					};
 
+					for (const key in this.props) {
+						if (this.props.hasOwnProperty(key) && key.startsWith(SUB_PROPS_PREFIX)) {
+							const k = key.substr(SUB_PROPS_LEN);
+							const val = this.props[key];
+							source.set(k, val);
+						}
+					}
+
 					// optionally use a function to compute options passed to each event
 					/*
 					todo: pass sourceRef index to options
@@ -251,10 +261,22 @@ export default function (sourceDef, patchDef, patchOptions) {
 			},
 			set(key) {
 				/*
-				todo: undo most of these. they should be done in a wrapper source
+				todo: undo most of these?
+				Can they be done in a wrapper source?
 				*/
-				if (startTime < Infinity && cancelProperties.indexOf(key) >= 0) {
+				const needsReset = startTime < Infinity && cancelProperties.indexOf(key) >= 0;
+				if (needsReset) {
 					stopFutureSounds(context.currentTime);
+				}
+
+				if (key.startsWith(SUB_PROPS_PREFIX)) {
+					const k = key.substr(SUB_PROPS_LEN);
+					sourceRefs.forEach(sourceRef => {
+						sourceRef.source.set(k, this.props[key]);
+					});
+				}
+
+				if (needsReset) {
 					controller.schedule();
 				}
 			},
