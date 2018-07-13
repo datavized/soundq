@@ -523,11 +523,17 @@ function SoundQ(options = {}) {
 		if (patch.reset) {
 			patch.reset();
 		}
-		if (patch.input) {
-			patch.input.disconnect();
-		}
+
+		/*
+		Assume patch will have been disconnected by source.
+		We don't want to disconnect every node in the patch,
+		since it might have some that are connected elsewhere.
+		*/
+
 		if (patch.output) {
-			patch.output.disconnect();
+			try {
+				patch.output.disconnect(context.destination);
+			} catch (e) {}
 		}
 
 		const expired = typeof patch.expired === 'function' ?
