@@ -77,7 +77,7 @@ function SoundQ(options = {}) {
 	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
 
 	// queues, maps and sets for various pools and events
-	const allShots = new Set();
+	const liveShotsByPublic = new Map(); // by object
 	const liveShots = new Map(); // by id
 	const sourcePools = new Map();
 	const patchPools = new Map();
@@ -287,13 +287,15 @@ function SoundQ(options = {}) {
 			}
 
 			soundEvents.delete(eventId);
-			source.events.delete(sound);
-			shot.source.events.delete(sound);
+			shot.events.delete(sound);
 			// todo: fire sound stop event
 
-			if (shot && !source.events.size && !shot.source.events.size && (shot.stopTime <= context.currentTime || shot.source.done && shot.source.done())) {
+			if (shot && !shot.events.size && (shot.stopTime <= context.currentTime || shot.source.done && shot.source.done())) {
 				// todo: fire shot stop event
 				liveShots.delete(shot.id);
+
+				const shotList = liveShotsByPublic.get(shot.publicShot);
+				shotList.delete(shot.id);
 
 				if (source.finish) {
 					source.finish();
@@ -375,7 +377,7 @@ function SoundQ(options = {}) {
 						unscheduledQueue.sort(sortUnscheduled);
 					}
 					soundEvents.set(id, soundEvent);
-					source.events.add(soundEvent);
+					soundEvent.shot.events.add(soundEvent);
 
 					if (soundEvent.stopTime >= context.currentTime) {
 						earliestStopTime = Math.min(earliestStopTime, soundEvent.stopTime);
@@ -406,7 +408,6 @@ function SoundQ(options = {}) {
 
 		source = Object.assign(definition(controller), {
 			controller,
-			events: new Set(),
 			definition,
 			shot: null,
 			props: {},
@@ -567,9 +568,10 @@ function SoundQ(options = {}) {
 		// todo: get destination somewhere. shot options? play options?
 
 		const defaultProps = {};
+		const shotList = new Map();
 
 		// todo: emit events
-		const shot = {
+		const publicShot = {
 			context,
 
 			/*
@@ -588,8 +590,9 @@ function SoundQ(options = {}) {
 
 				const shotInfo = {
 					id,
-					shot,
+					publicShot,
 					source,
+					events: new Set(),
 					patchDef,
 					startTime,
 					releaseTime: Infinity,
@@ -608,6 +611,7 @@ function SoundQ(options = {}) {
 				}
 
 				liveShots.set(id, shotInfo);
+				shotList.set(id, shotInfo);
 				startSourceShot(shotInfo, startTime, options);
 				return id;
 			},
@@ -616,40 +620,36 @@ function SoundQ(options = {}) {
 
 				// handle missing id for this shot def
 				if (id === undefined) {
-					liveShots.forEach(s => {
-						if (s.shot === shot && s.releaseTime > releaseTime) {
-							releaseSourceShot(s, releaseTime);
-						}
+					shotList.forEach(s => {
+						releaseSourceShot(s, releaseTime);
 					});
-					return shot;
+					return publicShot;
 				}
 
-				const s = liveShots.get(id);
-				if (s && s.shot === shot) {
+				const s = shotList.get(id);
+				if (s) {
 					releaseSourceShot(s, releaseTime);
 				}
 
-				return shot;
+				return publicShot;
 			},
 			stop(stopTime = 0, id) {
 				stopTime = Math.max(context.currentTime, stopTime);
 
 				// handle missing id for this shot def
 				if (id === undefined) {
-					liveShots.forEach(s => {
-						if (s.shot === shot && s.stopTime > stopTime) {
+					shotList.forEach(s => {
+						if (s.stopTime > stopTime) {
 							stopSourceShot(s, stopTime);
 						}
 					});
-					return shot;
+					return publicShot;
 				}
 
-				const s = liveShots.get(id);
-				if (s && s.shot === shot) {
-					stopSourceShot(s, stopTime);
-				}
+				const s = shotList.get(id);
+				stopSourceShot(s, stopTime);
 
-				return shot;
+				return publicShot;
 			},
 			set(id, key, value) {
 				if (typeof id !== 'number') {
@@ -660,7 +660,7 @@ function SoundQ(options = {}) {
 
 				const shotInfo = liveShots.get(id);
 				if (id !== undefined && !shotInfo) {
-					return shot;
+					return publicShot;
 				}
 
 				const props = shotInfo ? shotInfo.props : defaultProps;
@@ -675,47 +675,43 @@ function SoundQ(options = {}) {
 					if (id) {
 						for (const k in key) {
 							if (key.hasOwnProperty(k)) {
-								shot.set(id, k, key[k]);
+								publicShot.set(id, k, key[k]);
 							}
 						}
 					}
 				}
 
 				if (id === undefined) {
-					liveShots.forEach(s => {
-						if (s.shot === shot/* && s.startTime > context.currentTime*/) {
-							shot.set(s.id, key, value);
-						}
+					shotList.forEach(s => {
+						publicShot.set(s.id, key, value);
 					});
 				}
 
-				return shot;
+				return publicShot;
 			},
 			destroy() {
 				// todo: remove any event listeners
-				liveShots.forEach(s => {
-					if (s.shot === shot) {
-						stopSourceShot(s, context.currentTime);
-						s.source.events.forEach(e => revoke(e.id));
-					}
+				shotList.forEach(s => {
+					stopSourceShot(s, context.currentTime);
+					s.events.forEach(e => revoke(e.id));
 				});
-				allShots.delete(shot);
+				liveShotsByPublic.delete(publicShot);
 			}
 		};
 
-		allShots.add(shot);
+		liveShotsByPublic.set(publicShot, shotList);
 
-		return shot;
+		return publicShot;
 	};
 
 	this.stop = time => {
-		allShots.forEach(s => s.stop(time));
+		liveShotsByPublic.forEach((list, publicShot) => publicShot.stop(time));
 	};
 
 	this.destroy = () => {
 		destroyed = true;
 
-		allShots.forEach(s => s.destroy());
+		liveShotsByPublic.forEach((list, publicShot) => publicShot.destroy());
 		cleanUp();
 		releaseMainContext(this);
 
