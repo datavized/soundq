@@ -202,7 +202,7 @@ function SoundQ(options = {}) {
 			}
 		});
 
-		let untilTime = Infinity;
+		let untilTime = earliestStopTime + MIN_LOOK_AHEAD;
 		liveShots.forEach(shot => {
 			const { source } = shot;
 			if (source.request && shot.stopTime > context.currentTime) {

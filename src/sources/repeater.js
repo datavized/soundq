@@ -152,7 +152,10 @@ export default function (sourceDef, patchDef, patchOptions) {
 					// each event has start, release (Infinity?) and stop(Infinity?) time
 					// todo: get release from options?
 
-					const eventStopTime = eventStartTime + num(duration, DEFAULT_DURATION);
+					const eventStopTime = Math.min(
+						eventStartTime + num(duration, DEFAULT_DURATION),
+						stopTime
+					);
 					const eventReleaseTime = eventStopTime;
 
 					const source = controller.getSource(sourceDef);
