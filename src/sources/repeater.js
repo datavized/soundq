@@ -130,7 +130,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 				const done = context.currentTime >= releaseTime && !sourceRefs.size;
 				return done;
 			},
-			request(untilTime) {
+			request(untilTime, parentController) {
 				const {
 					duration,
 					interval,
@@ -163,7 +163,10 @@ export default function (sourceDef, patchDef, patchOptions) {
 						releaseTime: eventReleaseTime,
 						stopTime: eventStopTime,
 						source,
-						events: new Set()
+						events: new Set(),
+
+						// useful for debugging
+						name: sourceDef.name
 					};
 
 					for (const key in this.props) {
@@ -192,20 +195,32 @@ export default function (sourceDef, patchDef, patchOptions) {
 					sourceRefs.add(sourceRef);
 				}
 
-				let anyEventsSubmitted = false;
+				const anyEventsSubmitted = [];
+				const useController = parentController || controller;
 				sourceRefs.forEach(sourceRef => {
 					if (sourceRef.startTime <= maxTime && sourceRef.stopTime > context.currentTime) {
-						const event = sourceRef.source.request(untilTime);
-						if (event && typeof event === 'object') {
-							const id = controller.submit(event);
+						const event = sourceRef.source.request(untilTime, useController);
+						if (event && event.length && event.forEach) {
+							event.forEach(id => {
+								sourceRefsByEvent.set(id, sourceRef);
+								sourceRef.events.add(id);
+								anyEventsSubmitted.push(id);
+							});
+						} else if (event && typeof event === 'object') {
+							const id = useController.submit(event);
 							sourceRefsByEvent.set(id, sourceRef);
 							sourceRef.events.add(id);
+							anyEventsSubmitted.push(id);
+						} else if (typeof event === 'number') {
+							sourceRefsByEvent.set(event, sourceRef);
+							sourceRef.events.add(event);
+							anyEventsSubmitted.push(event);
+						} else if (event) {
+							console.warn('Unrecognized response', event);
 						}
-
-						anyEventsSubmitted = anyEventsSubmitted || !!event;
 					}
 				});
-				return anyEventsSubmitted;
+				return anyEventsSubmitted.length && parentController ? anyEventsSubmitted : !!anyEventsSubmitted.length;
 			},
 			startEvent(soundEvent) {
 				const sourceRef = sourceRefsByEvent.get(soundEvent.id);
@@ -221,6 +236,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 				}
 				if (sourceRef && sourceRef.source.startEvent) {
 					const soundEventConfig = sourceRef.source.startEvent(soundEvent);
+
 					if (soundEventConfig && patch && patch.input) {
 						soundEventConfig.output.connect(patch.input);
 						return {
@@ -254,7 +270,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 
 					sourceRef.events.delete(soundEvent.id);
 					sourceRefsByEvent.delete(soundEvent.id);
-					if (!source.events.size && (stopTime <= context.currentTime || source.done && source.done())) {
+					if (!sourceRef.events.size && (stopTime <= context.currentTime || source.done && source.done())) {
 						freeSourceRef(sourceRef);
 					}
 				}
