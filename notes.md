@@ -53,6 +53,10 @@ Source types
   - combine two oscillators?
   - https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling
   - end at zero crossing?
+- [ ] Synthesizer
+  - See for instruments: https://padenot.github.io/litsynth/
+  - more instruments: https://www.npmjs.com/package/synth-kit
+  - https://github.com/andyhall/webaudio-instruments
 
 Patch ideas
 - [x] Panner
