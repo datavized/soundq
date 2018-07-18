@@ -24,7 +24,7 @@ keys.forEach(k => {
 modes.forEach(mode => {
 	const option = document.createElement('option');
 	option.value = mode;
-	option.textContent = mode;
+	option.textContent = mode[0].toUpperCase() + mode.substr(1);
 	modeSelect.appendChild(option);
 });
 
@@ -42,8 +42,11 @@ const shot = soundQ.shot(repeater(oscillator, gainEnvelope, {
 		duration
 	});
 
-const button = document.getElementById('play');
-button.addEventListener('mousedown', () => {
+const stop = () => {
+	shot.release();
+};
+const start = () => {
+	shot.stop();
 	shot.start(0, ({startTime}, shot) => {
 		const note = notes[Math.round((startTime - shot.startTime) / interval) % notes.length];
 		const frequency = getKeyNoteFrequency(note, keySelect.value, modeSelect.value);
@@ -51,5 +54,9 @@ button.addEventListener('mousedown', () => {
 			frequency
 		};
 	});
-});
-button.addEventListener('mouseup', () => shot.release(0));
+};
+
+const startButton = document.getElementById('start');
+const stopButton = document.getElementById('stop');
+startButton.addEventListener('click', start);
+stopButton.addEventListener('click', stop);
