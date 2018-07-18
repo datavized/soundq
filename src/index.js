@@ -337,8 +337,6 @@ function SoundQ(options = {}) {
 		}
 	}
 
-	this.context = context;
-
 	function makeShotSource(definition) {
 		let source = null;
 
@@ -718,6 +716,15 @@ function SoundQ(options = {}) {
 		this.emit('destroy');
 		allOff(this);
 	};
+
+	Object.defineProperties(this, {
+		context: {
+			value: context
+		},
+		currentTime: {
+			get: () => context.currentTime
+		}
+	});
 }
 
 eventEmitter(SoundQ.prototype);
