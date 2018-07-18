@@ -10,10 +10,19 @@ import trapezoid from '../src/patches/trapezoid';
 import dragDrop from './util/drag-drop';
 import drawWaveform from 'draw-wave';
 import { Knob } from 'uil/src/proto/Knob';
-// import { Button } from 'uil/src/proto/Button';
+import WavEncoder from 'wav-encoder';
+const encodeSync = WavEncoder.encode.sync;
 
 document.title = 'Granular Synthesis';
 document.body.insertAdjacentHTML('beforeend', require('./grain.html'));
+
+const startButton = document.getElementById('start');
+const stopButton = document.getElementById('stop');
+const touch = document.getElementById('touch');
+const playhead = document.getElementById('playhead');
+const waveformContainer = document.getElementById('waveform-container');
+const exportButton = document.getElementById('export');
+const playThrough = document.getElementById('playthrough');
 
 const audioContext = new AudioContext();
 
@@ -41,9 +50,24 @@ let granular = null;
 let audioBuffer = null;
 let playing = false;
 let mouseIsDown = false;
+let saving = false;
 
 const grain = compose([trapezoid, panner]);
 const calcGrainOptions = grainOptions;
+
+function getOffset(time) {
+	return mouseIsDown || !playThrough.checked ? grainOptions.offset : time % audioBuffer.duration;
+}
+
+function updatePlayHead() {
+	const offset = audioBuffer && audioBuffer.duration ?
+		getOffset(audioContext.currentTime) / audioBuffer.duration :
+		0;
+
+	playhead.style.left = 100 * offset + '%';
+	requestAnimationFrame(updatePlayHead);
+}
+updatePlayHead();
 
 /*
 todo: add pitch jitter
@@ -51,7 +75,7 @@ todo: add pitch jitter
 function calcRepeaterOptions({startTime}) {
 	const spread = grainOptions.spread;
 	const length = grainOptions.length;
-	const offset = mouseIsDown ? grainOptions.offset : startTime % audioBuffer.duration;
+	const offset = getOffset(startTime);
 
 	const randomOffset = Math.random() * spread - spread / 2;
 	const maxOffset = audioBuffer.duration - length / repeaterOptions.transpose;
@@ -158,13 +182,6 @@ controlDefs.forEach(def => {
 	}
 });
 
-
-const startButton = document.getElementById('start');
-const stopButton = document.getElementById('stop');
-const touch = document.getElementById('touch');
-const playhead = document.getElementById('playhead');
-const waveformContainer = document.getElementById('waveform-container');
-
 const soundQ = new SoundQ({
 	maxLiveSounds: 1000
 });
@@ -228,6 +245,7 @@ function loadedBuffer(buffer) {
 	startButton.disabled = false;
 	stopButton.disabled = false;
 	touch.disabled = false;
+	exportButton.disabled = false;
 
 	stop();
 
@@ -278,4 +296,77 @@ dragDrop(files => {
 		audioContext.decodeAudioData(reader.result, loadedBuffer);
 	};
 	reader.readAsArrayBuffer(audioFile);
+});
+
+const downloadExport = buffer => {
+	console.log('finished offline render', buffer);
+
+	// convert and download buffer
+	const audioExport = {
+		sampleRate: buffer.sampleRate,
+		channelData: []
+	};
+	for (let c = 0; c < buffer.numberOfChannels; c++) {
+		audioExport.channelData.push(buffer.getChannelData(c));
+	}
+
+	// todo: this needs to be much faster
+	/*
+	todo: encode to other formats
+	- https://github.com/psirenny/opus-encode
+	- https://github.com/Rillke/opusenc.js
+	- https://github.com/zhuker/lamejs
+	- https://github.com/higuma/mp3-lame-encoder-js
+	*/
+	const wavBuffer = encodeSync(audioExport);
+
+	const blob = new Blob([wavBuffer], {type: 'audio/wav'});
+	const fileName = 'data.wav';
+	const linkEl = document.createElement('a');
+	const url = URL.createObjectURL(blob);
+	linkEl.href = url;
+	linkEl.setAttribute('download', fileName);
+	linkEl.innerHTML = 'downloading...';
+	linkEl.style.display = 'none';
+	document.body.appendChild(linkEl);
+	setTimeout(function () {
+		linkEl.click();
+		document.body.removeChild(linkEl);
+		URL.revokeObjectURL(url);
+	}, 1);
+};
+
+exportButton.addEventListener('click', () => {
+	if (saving || !audioBuffer) {
+		return;
+	}
+	saving = true;
+
+	stop();
+
+	const duration = 20; // seconds
+	const playDuration = duration - 1;
+	const context = new OfflineAudioContext(2, 44100 * duration, 44100);
+	const offlineQ = new SoundQ({
+		context
+	});
+
+	const granular = offlineQ
+		// .shot(granulizer(bufferSource(buffer)/*, grain, calcGrainOptions*/))
+		.shot(repeater(bufferSource(audioBuffer), grain, calcGrainOptions))
+		.set({
+			// length: 0.6,
+			// rate: 40,
+			// offset: 3.9,
+			// spread: 0,
+			// transpose: 1 // todo: change this to playbackRate
+		});
+
+	granular.start(0);
+	granular.release(playDuration).stop(duration);
+	context.startRendering().then(savedBuffer => {
+		downloadExport(savedBuffer);
+		saving = false;
+		offlineQ.destroy();
+	});
 });
