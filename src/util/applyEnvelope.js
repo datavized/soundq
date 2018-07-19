@@ -35,6 +35,7 @@ export default function applyEnvelope(param, startTime = 0, releaseTime = Infini
 		param.setValueAtTime(sustain, releaseTime);
 	}
 
+	stopTime = Math.min(stopTime, releaseTime + release);
 	if (stopTime < Infinity) {
 		param.linearRampToValueAtTime(0, stopTime);
 	}
