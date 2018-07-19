@@ -2,7 +2,7 @@ import SoundQ from '../src/index';
 import oscillator from '../src/sources/oscillator';
 import gainEnvelope from '../src/patches/gainEnvelope';
 import repeater from '../src/sources/repeater';
-import { getKeyNoteFrequency, keys, modes } from './util/scales';
+import { getKeyNoteFrequency, keys, modes } from '../src/util/scales';
 
 const interval = 0.4;
 const duration = 0.4;

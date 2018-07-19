@@ -57,6 +57,13 @@ Source types
   - See for instruments: https://padenot.github.io/litsynth/
   - more instruments: https://www.npmjs.com/package/synth-kit
   - https://github.com/andyhall/webaudio-instruments
+- [ ] Sampler
+- https://archive.org/details/total_harmonic_distortion
+- https://archive.org/details/g-town-church-sampling-project
+- https://www.samplephonics.com/products/free/sampler-instruments/the-leeds-town-hall-organ
+- http://www.philharmonia.co.uk/explore/sound_samples [NO LICENSE, but can ask Esa-Pekka]
+- https://embertone.com/freebies/intstrings-lite.php
+- https://cymatics.fm/blog/ultimate-list-of-free-live-instruments-samples/
 
 Patch ideas
 - [x] Panner
@@ -76,3 +83,5 @@ Patch ideas
     - https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
     - http://michaelkrzyzaniak.com/AudioSynthesis/2_Audio_Synthesis/11_Granular_Synthesis/1_Window_Functions/
 - [x] Compose (util for composing multiple patches into one)
+
+More samples:

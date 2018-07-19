@@ -1,7 +1,7 @@
 import SoundQ from '../src/index';
 import samplerSource from '../src/sources/sampler';
 import gainEnvelope from '../src/patches/gainEnvelope';
-import { getNoteMidi } from './util/scales';
+import { getNoteMidi } from '../src/util/scales';
 
 document.body.insertAdjacentHTML('beforeend', require('./buffer.html'));
 

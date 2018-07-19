@@ -4,6 +4,10 @@
   "description": "",
   "main": "./build/soundq.js",
   "module": "./build/soundq.module.js",
+  "files": [
+    "src/",
+    "build/"
+  ],
   "scripts": {
     "lint": "eslint ./; true",
     "lint-fix": "eslint --fix ./; true",
