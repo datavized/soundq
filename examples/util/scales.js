@@ -2,7 +2,7 @@
 Inspired by https://codepen.io/jakealbaugh/pen/NrdEYL/
 */
 const A4  = 440;
-const noteToScaleIndex = {
+export const noteToScaleIndex = {
 	cbb: -2, cb: -1, c: 0, 'c#': 1, cx: 2, dbb: 0, db: 1, d: 2, 'd#': 3, dx: 4, ebb: 2, eb: 3, e: 4, 'e#': 5, ex: 6, fbb: 3, fb: 4, f: 5, 'f#': 6, fx: 7, gbb: 5, gb: 6, g: 7, 'g#': 8, gx: 9, abb: 7, ab: 8, a: 9, 'a#': 10, ax: 11, bbb: 9, bb: 10, b: 11, 'b#': 12, bx: 13
 };
 
@@ -190,11 +190,15 @@ export const scales = {
 	}
 };
 
-export function getNoteFrequency(note, octave = 4) {
+export function getNoteMidi(note, octave = 4) {
 	note = note.toLowerCase();
 
 	const index = noteToScaleIndex[note];
-	const noteNumber = index + (octave + 1) * 12; // MIDI
+	return index + (octave + 1) * 12;
+}
+
+export function getNoteFrequency(note, octave = 4) {
+	const noteNumber = getNoteMidi(note, octave); // MIDI
 
 	return A4  * Math.pow(2, (noteNumber - 69) / 12);
 }
