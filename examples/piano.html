@@ -1,0 +1,51 @@
+<style>
+body {
+	margin: 0;
+	padding: 0;
+	font-family: sans-serif;
+}
+
+#keyboard {
+	display: inline-block;
+	position: relative;
+	user-select: none;
+}
+
+#keyboard > span {
+	display: inline-block;
+	position: relative;
+	z-index: 1;
+	margin: 0;
+	padding: 220px 15px 50px;
+	border: 1px solid #ccc;
+	background: #fafafa;
+	cursor: pointer;
+	color: transparent;
+}
+
+#keyboard > span:hover {
+	color: #C0C1BD;
+}
+
+#keyboard > span:active {
+	background: #f0f0f0;
+}
+
+#keyboard > span.ebony {
+	position: absolute;
+	z-index: 2;
+	width: 32px;
+	top: 0px;
+	margin-left: -16px;
+	padding: 130px 0px 10px;
+	background: #171C1A;
+	text-align: center;
+}
+
+#keyboard > span.ebony:active {
+	background: #424546;
+}
+
+
+</style>
+<div id="keyboard"></div>

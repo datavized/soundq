@@ -645,7 +645,9 @@ function SoundQ(options = {}) {
 				}
 
 				const s = shotList.get(id);
-				stopSourceShot(s, stopTime);
+				if (s) {
+					stopSourceShot(s, stopTime);
+				}
 
 				return publicShot;
 			},

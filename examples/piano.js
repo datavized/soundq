@@ -1,9 +1,9 @@
 import SoundQ from '../src/index';
 import samplerSource from '../src/sources/sampler';
 import gainEnvelope from '../src/patches/gainEnvelope';
-import { getNoteMidi } from '../src/util/scales';
+import { getNoteMidi, keys } from '../src/util/scales';
 
-document.body.insertAdjacentHTML('beforeend', require('./buffer.html'));
+document.body.insertAdjacentHTML('beforeend', require('./piano.html'));
 
 const soundQ = new SoundQ({
 	// maxLiveSounds: 20
@@ -69,26 +69,56 @@ const promises = Object.keys(sampleUrls).map(async key => {
 	}
 });
 
+const OCTAVES = 2;
+const START_OCTAVE = 3;
 Promise.all(promises).then(() => {
 
 	const shot = soundQ.shot(samplerSource(samples), gainEnvelope);
+	const keyboard = document.getElementById('keyboard');
+	const keyShots = [];
 
-	const button = document.getElementById('play');
-	button.disabled = false;
+	for (let i = 0; i < OCTAVES; i++) {
+		const octave = i + START_OCTAVE;
+		keys.forEach((noteName, scaleIndex) => {
+			const key = document.createElement('span');
+			key.textContent = noteName + octave;
+			if (noteName.length > 1) {
+				key.classList.add('ebony');
+			}
+			keyboard.appendChild(key);
 
-	let id;
-	button.addEventListener('mousedown', () => {
-		const midiNote = 21 + Math.round(Math.random() * 87);
-		id = shot.start(0, midiNote, envelopeOptions);
-	});
-	button.addEventListener('mouseup', () => {
-		shot.release(soundQ.currentTime, id)
-			.stop(soundQ.currentTime + 1, id);
-	});
+			const index = octave * keys.length + scaleIndex;
+			const note = getNoteMidi(noteName, octave);
+			const start = () => {
+				const oldShot = keyShots[index];
+				if (oldShot >= 0) {
+					shot.stop(0, oldShot);
+				}
 
-	// button.addEventListener('click', () => {
-	// 	console.log('playing');
-	// 	const id = shot.start(soundQ.context.currentTime);
-	// 	shot.stop(soundQ.context.currentTime + 2, id);
-	// });
+				const id = shot.start(0, note, envelopeOptions);
+				keyShots[index] = id;
+			};
+
+			const stop = () => {
+				const id = keyShots[index];
+				if (id >= 0) {
+					shot.release(soundQ.currentTime, id)
+						.stop(soundQ.currentTime + 1, id);
+				}
+			};
+
+			key.addEventListener('mousedown', start);
+			key.addEventListener('mouseup', stop);
+			key.addEventListener('touchstart', evt => {
+				if (evt.touches.length === 1) {
+					start();
+				}
+			});
+			key.addEventListener('touchend', evt => {
+				if (evt.touches.length === 0) {
+					stop();
+				}
+			});
+		});
+	}
 });
