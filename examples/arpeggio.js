@@ -47,7 +47,7 @@ const stop = () => {
 };
 const start = () => {
 	shot.stop();
-	shot.start(0, ({startTime}, shot) => {
+	shot.start(({startTime}, shot) => {
 		const note = notes[Math.round((startTime - shot.startTime) / interval) % notes.length];
 		const frequency = getKeyNoteFrequency(note, keySelect.value, modeSelect.value);
 		return {

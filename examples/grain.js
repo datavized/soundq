@@ -362,7 +362,7 @@ exportButton.addEventListener('click', () => {
 			// transpose: 1 // todo: change this to playbackRate
 		});
 
-	granular.start(0);
+	granular.start();
 	granular.release(playDuration).stop(duration);
 	context.startRendering().then(savedBuffer => {
 		downloadExport(savedBuffer);

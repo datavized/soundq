@@ -61,8 +61,8 @@ getAudioBuffer(audioFile).then(buffer => {
 	let id = 0;
 
 	function stop() {
-		shot.release(soundQ.context.currentTime, id);
-		shot.stop(soundQ.context.currentTime + envelopeOptions.release, id);
+		shot.release(soundQ.currentTime, id);
+		shot.stop(soundQ.currentTime + envelopeOptions.release, id);
 	}
 
 	function start() {
@@ -72,7 +72,7 @@ getAudioBuffer(audioFile).then(buffer => {
 
 	function play() {
 		const playbackRate = 1 + Math.random() * 0.5 - 0.25;
-		const start = soundQ.context.currentTime;
+		const start = soundQ.currentTime;
 		const stop = start + buffer.duration / playbackRate;
 		const release = stop - envelopeOptions.release;
 		const i = shot.start(start, {

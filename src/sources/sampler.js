@@ -50,10 +50,10 @@ export default function samplerSourceFactory(bufferTable) {
 			done() {
 				return !source || source.done && source.done();
 			},
-			start(time, note = 60) {
+			start(time, options = {}) {
 				startTime = time;
 				stopTime = Infinity;
-				midiNote = note;
+				midiNote = options.note || 60;
 			},
 			stop(time) {
 				stopTime = time;

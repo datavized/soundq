@@ -24,12 +24,12 @@ keyGrid.forEach(row => {
 		button.textContent = key;
 
 		const up = () => {
-			shot.release(soundQ.context.currentTime, shotId);
-			shot.stop(soundQ.context.currentTime + 0.02, shotId);
+			shot.release(soundQ.currentTime, shotId);
+			shot.stop(soundQ.currentTime + 0.02, shotId);
 		};
 		const down = () => {
 			up(); // just in case
-			shotId = shot.start(0, {key}, {
+			shotId = shot.start({key}, {
 				attack: 0,
 				release: 0.02,
 				decay: 0,

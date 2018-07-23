@@ -575,16 +575,15 @@ function SoundQ(options = {}) {
 			/*
 			We may decide to merge options and patchOptions somehow
 			*/
-			start(startTime = 0, options, patchOptions) {
+			start(startTime = context.currentTime, options, patchOptions) {
 				if (typeof startTime !== 'number' && startTime !== undefined) {
 					patchOptions = options;
 					options = startTime;
-					startTime = 0;
+					startTime = context.currentTime;
 				}
 
 				const id = nextShotId++;
 				const source = getSource(sourceFn);
-				startTime = Math.max(context.currentTime, startTime);
 
 				const shotInfo = {
 					id,
@@ -613,8 +612,7 @@ function SoundQ(options = {}) {
 				startSourceShot(shotInfo, startTime, options);
 				return id;
 			},
-			release(releaseTime = 0, id) {
-				releaseTime = Math.max(context.currentTime, releaseTime);
+			release(releaseTime = context.currentTime, id) {
 
 				// handle missing id for this shot def
 				if (id === undefined) {
@@ -631,8 +629,7 @@ function SoundQ(options = {}) {
 
 				return publicShot;
 			},
-			stop(stopTime = 0, id) {
-				stopTime = Math.max(context.currentTime, stopTime);
+			stop(stopTime = context.currentTime, id) {
 
 				// handle missing id for this shot def
 				if (id === undefined) {

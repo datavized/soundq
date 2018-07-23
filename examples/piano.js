@@ -181,10 +181,10 @@ function makeKeyboard() {
 
 				const oldShot = keyShots[index];
 				if (oldShot >= 0) {
-					shot.stop(0, oldShot);
+					shot.stop(soundQ.currentTime, oldShot);
 				}
 
-				const id = shot.start(0, note, envelopeOptions);
+				const id = shot.start(soundQ.currentTime, { note }, envelopeOptions);
 				keyShots[index] = id;
 			};
 

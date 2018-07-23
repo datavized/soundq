@@ -23,13 +23,13 @@ getAudioBuffer(audioFile).then(buffer => {
 
 	let id;
 	button.addEventListener('mousedown', () => {
-		id = shot.start(0);
+		id = shot.start();
 	});
-	button.addEventListener('mouseup', () => shot.stop(0, id));
+	button.addEventListener('mouseup', () => shot.stop(soundQ.currentTime, id));
 
 	// button.addEventListener('click', () => {
 	// 	console.log('playing');
-	// 	const id = shot.start(soundQ.context.currentTime);
+	// 	const id = shot.start(soundQ.currentTime);
 	// 	shot.stop(soundQ.context.currentTime + 2, id);
 	// });
 });
