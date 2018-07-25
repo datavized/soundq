@@ -6,6 +6,7 @@ import computeOptions from './util/computeOptions';
 
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
+const OFFLINE_LOOK_AHEAD = 5;
 const MAX_SCHEDULED_SOUNDS = 40;
 
 let mainContext = null;
@@ -75,6 +76,10 @@ function SoundQ(options = {}) {
 	const context = options.context || getMainContext(this);
 
 	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
+
+	const minLookAhead = context instanceof OfflineAudioContext ?
+		OFFLINE_LOOK_AHEAD :
+		MIN_LOOK_AHEAD;
 
 	// queues, maps and sets for various pools and events
 	const liveShotsByPublic = new Map(); // by object
@@ -188,7 +193,7 @@ function SoundQ(options = {}) {
 
 		scheduling = true;
 
-		const urgentTime = context.currentTime + MIN_LOOK_AHEAD;
+		const urgentTime = context.currentTime + minLookAhead;
 		liveShots.forEach(shot => {
 			const { source } = shot;
 			if (source.request && shot.stopTime > context.currentTime) {
@@ -202,13 +207,13 @@ function SoundQ(options = {}) {
 			}
 		});
 
-		let untilTime = earliestStopTime + MIN_LOOK_AHEAD;
+		let untilTime = earliestStopTime + minLookAhead;
 		liveShots.forEach(shot => {
 			const { source } = shot;
 			if (source.request && shot.stopTime > context.currentTime) {
 				let event = null;
 				do {
-					untilTime = Math.min(untilTime, earliestStopTime + MIN_LOOK_AHEAD);
+					untilTime = Math.min(untilTime, earliestStopTime + minLookAhead);
 					event = source.request(untilTime);
 					if (event && typeof event === 'object') {
 						source.controller.submit(event);
