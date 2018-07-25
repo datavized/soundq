@@ -15,11 +15,14 @@ export default function trapezoid(context) {
 		start(startTime, releaseTime, stopTime, options = {}) {
 			const amplitude = num(options.amplitude, DEFAULT_AMPLITUDE); // value
 			const crossFade = num(options.crossFade, DEFAULT_CROSSFADE); // time in seconds
+			const scaleIn = num(options.scaleIn, 1);
+			const scaleOut = num(options.scaleOut, 1);
 
 			const length = stopTime - startTime;
-			const fadeDuration = Math.min(Math.max(crossFade, minFadeDuration), length / 2);
-			const fadeInTime = startTime + fadeDuration;
-			const fadeOutTime = stopTime - fadeDuration;
+			const fadeInDuration = Math.min(Math.max(crossFade * scaleIn, minFadeDuration), length / 2);
+			const fadeOutDuration = Math.min(Math.max(crossFade * scaleOut, minFadeDuration), length / 2);
+			const fadeInTime = startTime + fadeInDuration;
+			const fadeOutTime = Math.min(releaseTime, stopTime - fadeOutDuration);
 
 			gain.gain.cancelScheduledValues(context.currentTime);
 			gain.gain.setValueAtTime(0.0, startTime);
