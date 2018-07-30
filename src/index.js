@@ -12,6 +12,8 @@ const MAX_SCHEDULED_SOUNDS = 40;
 let mainContext = null;
 const mainContextUsers = new Set();
 
+const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
 function getMainContext(instance) {
 	if (!mainContext) {
 		mainContext = createAudioContext();

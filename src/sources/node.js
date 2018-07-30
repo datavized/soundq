@@ -1,5 +1,6 @@
 export default function (node) {
-	if (!(node instanceof AudioScheduledSourceNode)) {
+	// Safari doesn't implement `AudioScheduledSourceNode`
+	if (!node || !(node instanceof AudioNode) || !node.start) {
 		throw new Error('Node source requires an AudioScheduledSourceNode');
 	}
 
