@@ -10,7 +10,7 @@ const soundQ = new SoundQ({
 function getAudioBuffer(url) {
 	return fetch(url)
 		.then(response => response.arrayBuffer())
-		.then(buffer => soundQ.context.decodeAudioData(buffer));
+		.then(buffer => new Promise(resolve => soundQ.context.decodeAudioData(buffer, resolve)));
 }
 
 const audioFile = require('./audio/forest.mp3');
