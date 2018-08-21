@@ -1,6 +1,6 @@
 export default function (node) {
 	// Safari doesn't implement `AudioScheduledSourceNode`
-	if (!node || !(node instanceof AudioNode) || !node.start) {
+	if (!node || !node.start) {
 		throw new Error('Node source requires an AudioScheduledSourceNode');
 	}
 
@@ -12,7 +12,6 @@ export default function (node) {
 		let stopTime = Infinity;
 		let offset = 0;
 		let done = false;
-		let timerNode = null;
 
 		function stop(time) {
 			stopTime = time;
@@ -33,31 +32,7 @@ export default function (node) {
 
 		function stopEvent({ stopTime }) {
 			if (started) {
-				if (node.SCHEDULED_STATE && node.playbackState >= node.SCHEDULED_STATE) {
-					// safari is weird and not spec-compliant
-					// https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Porting_webkitAudioContext_code_to_standards_based_AudioContext
-					if (stopTime <= controller.currentTime) {
-						ended();
-					} else {
-						if (timerNode) {
-							timerNode.disconnect();
-							timerNode.onended = null;
-						}
-
-						// make a fake node to schedule the end
-						const context = controller.context;
-						timerNode = context.createBufferSource();
-						const silentBuffer = context.createBuffer(1, 1, context.sampleRate);
-						timerNode.buffer = silentBuffer;
-						timerNode.loop = true;
-						timerNode.connect(context.destination);
-						timerNode.onended = ended;
-						timerNode.start(context.currentTime);
-						timerNode.stop(stopTime);
-					}
-				} else {
-					node.stop(stopTime);
-				}
+				node.stop(stopTime);
 			} else if (submitted) {
 				console.log('stopping submitted (but not started) event');
 				controller.revoke(eventId);
@@ -103,13 +78,7 @@ export default function (node) {
 				offset = o || 0;
 			},
 			// release: stop,
-			stop,
-			destroy() {
-				if (timerNode) {
-					timerNode.disconnect();
-					timerNode.onended = null;
-				}
-			}
+			stop
 
 			// This has no finishEvent because it cannot be restarted
 			// Audio nodes cannot be reused, so you just need to create a new instance

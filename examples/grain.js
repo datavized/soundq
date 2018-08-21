@@ -1,3 +1,4 @@
+import { AudioContext, OfflineAudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 
 import bufferSource from '../src/sources/buffer';
@@ -183,7 +184,8 @@ controlDefs.forEach(def => {
 });
 
 const soundQ = new SoundQ({
-	maxLiveSounds: 1000
+	maxLiveSounds: 1000,
+	context: new AudioContext()
 });
 
 const start = () => {

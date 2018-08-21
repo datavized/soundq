@@ -1,3 +1,4 @@
+import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import samplerSource from '../src/sources/sampler';
 import gainEnvelope from '../src/patches/gainEnvelope';
@@ -6,7 +7,8 @@ import { getNoteMidi, keys } from '../src/util/scales';
 document.body.insertAdjacentHTML('beforeend', require('./piano.html'));
 
 const soundQ = new SoundQ({
-	// maxLiveSounds: 20
+	// maxLiveSounds: 20,
+	context: new AudioContext()
 });
 
 function getAudioBuffer(url) {

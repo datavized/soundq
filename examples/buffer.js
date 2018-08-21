@@ -1,3 +1,4 @@
+import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 
@@ -5,6 +6,7 @@ document.body.insertAdjacentHTML('beforeend', require('./buffer.html'));
 
 const soundQ = new SoundQ({
 	// maxLiveSounds: 20
+	context: new AudioContext()
 });
 
 function getAudioBuffer(url) {

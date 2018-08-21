@@ -1,7 +1,7 @@
 import audioNodeSource from './node';
 
 export default function bufferSourceFactory(buffer) {
-	if (!(buffer instanceof AudioBuffer)) {
+	if (!buffer.getChannelData || !buffer.sampleRate) {
 		throw new Error('Buffer source requires an AudioBuffer');
 	}
 

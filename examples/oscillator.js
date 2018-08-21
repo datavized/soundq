@@ -1,3 +1,4 @@
+import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import oscillator from '../src/sources/oscillator';
 import gainEnvelope from '../src/patches/gainEnvelope';
@@ -5,7 +6,8 @@ import gainEnvelope from '../src/patches/gainEnvelope';
 document.body.insertAdjacentHTML('beforeend', require('./oscillator.html'));
 
 const soundQ = new SoundQ({
-	cacheExpiration: 2
+	cacheExpiration: 2,
+	context: new AudioContext()
 });
 
 // const oscillatorNode = soundQ.context.createOscillator();

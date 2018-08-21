@@ -5,6 +5,7 @@ https://freesound.org/people/InspectorJ/sounds/397946/
 also try: https://freesound.org/people/skiersailor/sounds/75263/
 */
 
+import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 import gainEnvelope from '../src/patches/gainEnvelope';
@@ -19,7 +20,9 @@ function getAudioBuffer(url) {
 		.then(buffer => audioContext.decodeAudioData(buffer));
 }
 
-const soundQ = new SoundQ();
+const soundQ = new SoundQ({
+	context: new AudioContext()
+});
 
 const audioFile = require('./audio/tiny.mp3');
 getAudioBuffer(audioFile).then(buffer => {

@@ -1,3 +1,4 @@
+import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 import repeater from '../src/sources/repeater';
@@ -6,7 +7,8 @@ import panner from '../src/patches/panner';
 document.body.insertAdjacentHTML('beforeend', require('./repeater.html'));
 
 const soundQ = new SoundQ({
-	cacheExpiration: 2
+	cacheExpiration: 2,
+	context: new AudioContext()
 });
 
 function getAudioBuffer(url) {

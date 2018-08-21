@@ -1,3 +1,4 @@
+import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 
 import bufferSource from '../src/sources/buffer';
@@ -36,7 +37,8 @@ const secondsPerBeat = 60 / tempo;
 // const stopButton = document.getElementById('stop');
 
 const soundQ = new SoundQ({
-	maxLiveSounds: 1000
+	maxLiveSounds: 1000,
+	context: new AudioContext()
 });
 const grain = compose([trapezoid, panner]);
 
