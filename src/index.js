@@ -1,6 +1,5 @@
 import eventEmitter from 'event-emitter';
 import allOff from 'event-emitter/all-off';
-import createAudioContext from 'ios-safe-audio-context';
 import num from './util/num';
 import computeOptions from './util/computeOptions';
 
@@ -14,7 +13,7 @@ const mainContextUsers = new Set();
 
 function getMainContext(instance) {
 	if (!mainContext) {
-		mainContext = createAudioContext();
+		mainContext = new AudioContext();
 	}
 	mainContextUsers.add(instance);
 	return mainContext;
