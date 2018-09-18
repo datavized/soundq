@@ -5,8 +5,9 @@ import computeOptions from './util/computeOptions';
 
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
-const OFFLINE_LOOK_AHEAD = 5;
+const OFFLINE_LOOK_AHEAD = 20;
 const MAX_SCHEDULED_SOUNDS = 40;
+const OFFLINE_MAX_SCHEDULED_SOUNDS = 100;
 
 let mainContext = null;
 const mainContextUsers = new Set();
@@ -79,6 +80,11 @@ function SoundQ(options = {}) {
 	const minLookAhead = context.startRendering ?
 		OFFLINE_LOOK_AHEAD :
 		MIN_LOOK_AHEAD;
+
+	const maxScheduledSounds = context.startRendering ?
+		OFFLINE_MAX_SCHEDULED_SOUNDS :
+		MAX_SCHEDULED_SOUNDS;
+
 
 	// queues, maps and sets for various pools and events
 	const liveShotsByPublic = new Map(); // by object
@@ -239,7 +245,7 @@ function SoundQ(options = {}) {
 		  - efficiently store earliest stopTime
 		  - probably faster to use binary insert
 		*/
-		while (unscheduledQueue.length && playedSounds.length < MAX_SCHEDULED_SOUNDS) {
+		while (unscheduledQueue.length && playedSounds.length < maxScheduledSounds) {
 			const sound = unscheduledQueue.shift();
 
 			/*
