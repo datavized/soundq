@@ -14,9 +14,9 @@ export default function applyEnvelope(param, startTime = 0, releaseTime = Infini
 	const decay = num(options.decay, DEFAULT_DECAY); // time
 	const sustain = num(options.sustain, DEFAULT_SUSTAIN); // value
 
-	releaseTime = Math.min(releaseTime, stopTime - release);
+	releaseTime = Math.max(0, Math.min(releaseTime, stopTime - release));
 
-	const peakTime = Math.min(startTime + attack, releaseTime);
+	const peakTime = Math.max(0, Math.min(startTime + attack, releaseTime));
 	const attackDuration = peakTime - startTime;
 
 	const peak = num(options.peak, param.defaultValue) * Math.min(1, attack ? attackDuration / attack : 1);
