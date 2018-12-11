@@ -85,3 +85,34 @@ Patch ideas
 - [x] Compose (util for composing multiple patches into one)
 
 More samples:
+
+
+Data Synthesis
+- [x] Implement playback modules
+  - audio playback plugin
+  - UI interface
+
+- [x] Update sound file playback for plugin architecture
+
+- [x] Basic synthesizer
+  - one instrument
+  - pick key/mode
+  - pick range of octaves
+  - one note at a time
+
+- [ ] Play triad/chord as long as necessary?
+
+- [ ] Add advanced arpeggio option?
+  https://codepen.io/jakealbaugh/full/qNrZyw
+
+- [ ] Different synthesizer instrument options
+
+- [ ] Piano?
+  https://github.com/Tonejs/Tone.js/blob/master/examples/sampler.html
+
+- [ ] Church Organ
+  https://archive.org/details/g-town-church-sampling-project
+
+- [ ] Church Mandolin
+
+- [ ] Church toy glockenspiel
