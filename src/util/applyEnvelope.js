@@ -8,18 +8,19 @@ const DEFAULT_DECAY = 0.2;
 const DEFAULT_SUSTAIN = 0.6;
 
 export default function applyEnvelope(param, startTime = 0, releaseTime = Infinity, stopTime = Infinity, options = {}) {
-	const start = options.start || 0; // value
+	const gain = num(options.gain, 1);
+	const start = (options.start || 0) * gain; // value
 	const release = num(options.release, DEFAULT_RELEASE); // time
 	const attack = num(options.attack, DEFAULT_ATTACK); // time
 	const decay = num(options.decay, DEFAULT_DECAY); // time
-	const sustain = num(options.sustain, DEFAULT_SUSTAIN); // value
+	const sustain = num(options.sustain, DEFAULT_SUSTAIN) * gain; // value
 
 	releaseTime = Math.max(0, Math.min(releaseTime, stopTime - release));
 
 	const peakTime = Math.max(0, Math.min(startTime + attack, releaseTime));
 	const attackDuration = peakTime - startTime;
 
-	const peak = num(options.peak, param.defaultValue) * Math.min(1, attack ? attackDuration / attack : 1);
+	const peak = num(options.peak, param.defaultValue) * gain * Math.min(1, attack ? attackDuration / attack : 1);
 
 	const startSustainTime = Math.min(peakTime + decay, releaseTime);
 
