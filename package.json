@@ -57,7 +57,6 @@
     "web-audio-test-api": "^0.5.2",
     "webpack": "^4.29.0",
     "webpack-build-notifier": "^0.1.30",
-    "webpack-bundle-analyzer": "^2.13.1",
     "webpack-cli": "^3.2.1",
     "webpack-dev-server": "^3.1.14",
     "webpack-merge": "^4.2.1"

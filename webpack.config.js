@@ -13,7 +13,6 @@ const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
 const WebpackBuildNotifierPlugin = require('webpack-build-notifier');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const autoprefixer = require('autoprefixer');
 
@@ -291,11 +290,6 @@ const distConfig = {
 				minifyJS: true,
 				minifyCSS: true
 			}
-		}),
-		new BundleAnalyzerPlugin({
-			openAnalyzer: false,
-			analyzerMode: 'static',
-			reportFilename: '../report.html'
 		})
 	]
 };
