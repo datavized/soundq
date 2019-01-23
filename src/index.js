@@ -521,7 +521,7 @@ function SoundQ(options = {}) {
 		if (patch.input === undefined) {
 			patch.input = patch.node;
 		}
-		if (!patch.output === undefined) {
+		if (patch.output === undefined) {
 			patch.output = patch.node;
 		}
 

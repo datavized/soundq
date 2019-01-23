@@ -14,7 +14,8 @@ export default function compose(definitions) {
 			if (previous && next) {
 				previous.connect(next);
 			}
-			output = previous = patch.output || patch.node || previous;
+			previous = patch.output !== undefined ? patch.output : patch.node || previous;
+			output = previous || null;
 		}
 
 		return {
