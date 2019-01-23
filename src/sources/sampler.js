@@ -92,7 +92,10 @@ export default function samplerSourceFactory(bufferTable) {
 					// todo: velocity?
 
 					const start = Math.max(startTime, context.currentTime);
-					source.start(start, { playbackRate });
+					source.start(start, {
+						playbackRate,
+						offset: Math.max(0, context.currentTime - startTime)
+					});
 					source.stop(Math.min(stopTime, start + buffer.duration / playbackRate));
 
 					submitted = true;
