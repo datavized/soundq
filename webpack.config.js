@@ -51,8 +51,6 @@ examples.forEach(name => {
 	entry['example-' + name] = buildEntryPoint(path.resolve(examplesDirectory, name + '.js'));
 });
 
-const babelPlugins = env === 'development' ? [] : [];
-
 const plugins = [
 	new CaseSensitivePathsPlugin(),
 	new CleanWebpackPlugin(['build/**/*'], {
@@ -106,8 +104,12 @@ const config = {
 							babelrc: false,
 							presets: [
 								[
-									'env',
+									'@babel/env',
 									{
+										exclude: [
+											'transform-regenerator',
+											'transform-async-to-generator'
+										],
 										targets: {
 											browsers
 										},
@@ -117,16 +119,14 @@ const config = {
 								]
 							],
 							plugins: [
-								...babelPlugins,
-								'transform-class-properties',
-								['transform-object-rest-spread', { useBuiltIns: true }],
-								['transform-runtime', {
+								'@babel/plugin-proposal-class-properties',
+								['@babel/plugin-proposal-object-rest-spread', { useBuiltIns: true }],
+								['@babel/plugin-transform-runtime', {
 									helpers: false,
-									polyfill: false,
 									regenerator: true
 								}],
-								'syntax-dynamic-import',
-								'fast-async'
+								'@babel/plugin-syntax-dynamic-import',
+								'module:fast-async'
 
 								// todo: for tests
 								// https://github.com/facebookincubator/create-react-app/blob/master/packages/babel-preset-react-app/index.js#L72
