@@ -6,8 +6,8 @@ import computeOptions from './util/computeOptions';
 // todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
 const OFFLINE_LOOK_AHEAD = 20;
-const MAX_SCHEDULED_SOUNDS = 40;
-const OFFLINE_MAX_SCHEDULED_SOUNDS = 100;
+const MAX_SCHEDULED_SOUNDS = 100;
+const OFFLINE_MAX_SCHEDULED_SOUNDS = 500;
 
 let mainContext = null;
 const mainContextUsers = new Set();
@@ -76,15 +76,15 @@ function SoundQ(options = {}) {
 	const context = options.context || getMainContext(this);
 
 	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
+	const isOffline = !!context.startRendering;
 
-	const minLookAhead = context.startRendering ?
-		OFFLINE_LOOK_AHEAD :
+	const minLookAhead = isOffline ?
+		Math.min(OFFLINE_LOOK_AHEAD, context.length / context.sampleRate) :
 		MIN_LOOK_AHEAD;
 
-	const maxScheduledSounds = context.startRendering ?
+	const maxScheduledSounds = isOffline ?
 		OFFLINE_MAX_SCHEDULED_SOUNDS :
 		MAX_SCHEDULED_SOUNDS;
-
 
 	// queues, maps and sets for various pools and events
 	const liveShotsByPublic = new Map(); // by object
@@ -99,6 +99,7 @@ function SoundQ(options = {}) {
 	let earliestStopTime = Infinity;
 	let cleanUpTimeout = 0;
 	let destroyed = false;
+	let scheduledSuspend = Infinity;
 
 	function cleanUp() {
 		clearTimeout(cleanUpTimeout);
@@ -245,7 +246,7 @@ function SoundQ(options = {}) {
 		  - efficiently store earliest stopTime
 		  - probably faster to use binary insert
 		*/
-		while (unscheduledQueue.length && playedSounds.length < maxScheduledSounds) {
+		while (unscheduledQueue.length && (playedSounds.length < maxScheduledSounds || scheduledSuspend < Infinity)) {
 			const sound = unscheduledQueue.shift();
 
 			/*
@@ -257,8 +258,25 @@ function SoundQ(options = {}) {
 				startSoundEvent(sound);
 			} else {
 				// we missed one!
+				console.log('Missed sound!', sound, context.currentTime);
 				revoke(sound.id);
 			}
+		}
+
+		if (isOffline && context.suspend && unscheduledQueue.length && scheduledSuspend === Infinity && context.state === 'running') {
+			const suspendTime = Math.max(context.currentTime + 100 / context.sampleRate, Math.min(unscheduledQueue[0].startTime - 0.05, earliestStopTime));
+			scheduledSuspend = suspendTime;
+			context.suspend(suspendTime).then(() => {
+				scheduledSuspend = Infinity;
+				try {
+					context.resume();
+				} catch (e) {
+					console.warn('failed to resume', e);
+				}
+				scheduleSounds();
+			}).catch(e => {
+				console.log('failed to suspend', e, context);
+			});
 		}
 
 		scheduling = false;
