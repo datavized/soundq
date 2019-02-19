@@ -32,6 +32,14 @@ function releaseMainContext(instance) {
 
 // sort by start time
 function sortUnscheduled(a, b) {
+	// deprioritize events that don't have an end time yet
+	if (a.stopTime === Infinity && b.stopTime !== Infinity) {
+		return 1;
+	}
+	if (b.stopTime === Infinity && a.stopTime !== Infinity) {
+		return -1;
+	}
+
 	const startDiff = a.startTime - b.startTime;
 	if (startDiff) {
 		return startDiff;
@@ -214,20 +222,28 @@ function SoundQ(options = {}) {
 		});
 
 		let untilTime = earliestStopTime + minLookAhead;
-		liveShots.forEach(shot => {
-			const { source } = shot;
-			if (source.request && shot.stopTime > context.currentTime) {
+		const liveShotsCopy = new Set(liveShots.values());
+		while (liveShotsCopy.size) {
+			liveShotsCopy.forEach(shot => {
+				const { source } = shot;
+
 				let event = null;
-				do {
+
+				// if this is an offline context, don't schedule any sounds that don't have an end time
+				if (source.request && shot.stopTime > context.currentTime && (!isOffline || shot.stopTime < Infinity)) {
 					untilTime = Math.min(untilTime, earliestStopTime + minLookAhead);
 					event = source.request(untilTime);
 					if (event && typeof event === 'object') {
 						source.controller.submit(event);
 						earliestStopTime = Math.min(earliestStopTime, event.stopTime);
 					}
-				} while (event);
-			}
-		});
+				}
+
+				if (!event) {
+					liveShotsCopy.delete(shot);
+				}
+			});
+		}
 		/*
 		todo: loop through any started sound events
 		- fade out anything that's been playing a long time if we're over the limit
