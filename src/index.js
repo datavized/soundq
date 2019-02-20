@@ -284,24 +284,23 @@ function SoundQ(options = {}) {
 		}
 
 		if (isOffline && context.suspend && (unscheduledQueue.length || playedSounds.length * 2 >= MAX_SCHEDULED_SOUNDS) && scheduledSuspend === Infinity && context.state === 'running') {
-			const suspendTime = Math.min(
-				contextFinalTime,
-				Math.max(
-					context.currentTime + 100 / context.sampleRate,
-					Math.min(unscheduledQueue[0] && unscheduledQueue[0].startTime - 0.05 || 0, earliestStopTime)
-				)
+			const suspendTime = Math.max(
+				context.currentTime + 250 / context.sampleRate,
+				Math.min(unscheduledQueue[0] && unscheduledQueue[0].startTime - 0.05 || 0, earliestStopTime)
 			);
-			scheduledSuspend = suspendTime;
-			context.suspend(suspendTime).then(() => {
-				scheduledSuspend = Infinity;
-				context.resume();
-				// try {
-				// 	context.resume();
-				// } catch (e) {
-				// 	console.warn('failed to resume', e);
-				// }
-				scheduleSounds();
-			});
+			if (suspendTime < contextFinalTime) {
+				scheduledSuspend = suspendTime;
+				context.suspend(suspendTime).then(() => {
+					scheduledSuspend = Infinity;
+					context.resume();
+					// try {
+					// 	context.resume();
+					// } catch (e) {
+					// 	console.warn('failed to resume', e);
+					// }
+					scheduleSounds();
+				});
+			}
 		}
 
 		scheduling = false;
