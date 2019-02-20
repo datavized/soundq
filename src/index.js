@@ -3,7 +3,6 @@ import allOff from 'event-emitter/all-off';
 import num from './util/num';
 import computeOptions from './util/computeOptions';
 
-// todo: MIN_LOOK_AHEAD might be longer for offline context
 const MIN_LOOK_AHEAD = 0.05; // seconds
 const OFFLINE_LOOK_AHEAD = 20;
 const MAX_SCHEDULED_SOUNDS = 100;
@@ -85,9 +84,10 @@ function SoundQ(options = {}) {
 
 	const cacheExpiration = Math.max(0, num(options.cacheExpiration, 10)) * 1000; // seconds -> milliseconds
 	const isOffline = !!context.startRendering;
+	const contextFinalTime = isOffline ? context.length / context.sampleRate : Infinity;
 
 	const minLookAhead = isOffline ?
-		Math.min(OFFLINE_LOOK_AHEAD, context.length / context.sampleRate) :
+		Math.min(OFFLINE_LOOK_AHEAD, contextFinalTime) :
 		MIN_LOOK_AHEAD;
 
 	const maxScheduledSounds = isOffline ?
@@ -284,7 +284,13 @@ function SoundQ(options = {}) {
 		}
 
 		if (isOffline && context.suspend && (unscheduledQueue.length || playedSounds.length * 2 >= MAX_SCHEDULED_SOUNDS) && scheduledSuspend === Infinity && context.state === 'running') {
-			const suspendTime = Math.max(context.currentTime + 100 / context.sampleRate, Math.min(unscheduledQueue[0] && unscheduledQueue[0].startTime - 0.05 || 0, earliestStopTime));
+			const suspendTime = Math.min(
+				contextFinalTime,
+				Math.max(
+					context.currentTime + 100 / context.sampleRate,
+					Math.min(unscheduledQueue[0] && unscheduledQueue[0].startTime - 0.05 || 0, earliestStopTime)
+				)
+			);
 			scheduledSuspend = suspendTime;
 			context.suspend(suspendTime).then(() => {
 				scheduledSuspend = Infinity;
