@@ -87,16 +87,18 @@ export default function (sourceDef, patchDef, patchOptions) {
 		}
 
 		function stopSound(sourceRef, time) {
-			sourceRef.startTime = time;
-			sourceRef.releaseTime = time;
+			sourceRef.startTime = Math.min(sourceRef.startTime, time);
+			sourceRef.releaseTime = Math.min(sourceRef.releaseTime, time);
 			sourceRef.stopTime = time;
 			if (sourceRef.source.stop) {
 				sourceRef.source.stop(time);
 			}
 
-			sourceRef.events.forEach(id => {
-				controller.revoke(id);
-			});
+			if (sourceRef.startTime >= time) {
+				sourceRef.events.forEach(id => {
+					controller.revoke(id);
+				});
+			}
 		}
 
 		function stopFutureSounds(time) {
