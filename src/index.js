@@ -263,10 +263,10 @@ function SoundQ(options = {}) {
 		  - probably faster to use binary insert
 		*/
 		while (unscheduledQueue.length && (
-				playedSounds.length < maxScheduledSounds ||
+			playedSounds.length < maxScheduledSounds ||
 				scheduledSuspend < Infinity ||
 				isOffline && unscheduledQueue[0].startTime <= context.currentTime + minLookAhead
-			)) {
+		)) {
 			const sound = unscheduledQueue.shift();
 
 			/*
