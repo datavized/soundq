@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const merge = require('webpack-merge');
 
-process.traceDeprecation = true;
+process.traceDeprecation = false;
 
 // webpack plugins and related utils
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -230,12 +230,10 @@ const devConfig = {
 		new WebpackBuildNotifierPlugin({
 			title: path.basename(__dirname),
 			suppressSuccess: true
-		})
+		}),
 		// new webpack.HotModuleReplacementPlugin(),
 
-		// temporarily disabled pending bug fix
-		// https://github.com/facebook/create-react-app/issues/4466
-		// new WatchMissingNodeModulesPlugin(resolveApp('node_modules')),
+		new WatchMissingNodeModulesPlugin(resolveApp('node_modules')),
 	].concat(examples.map(name => {
 		return new HtmlWebpackPlugin({
 			inject: true,
