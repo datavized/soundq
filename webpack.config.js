@@ -231,7 +231,7 @@ const devConfig = {
 		}),
 		// new webpack.HotModuleReplacementPlugin(),
 
-		new WatchMissingNodeModulesPlugin(resolveApp('node_modules')),
+		new WatchMissingNodeModulesPlugin(resolveApp('node_modules'))
 	].concat(examples.map(name => {
 		return new HtmlWebpackPlugin({
 			inject: true,

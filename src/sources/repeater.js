@@ -175,7 +175,7 @@ export default function (sourceDef, patchDef, patchOptions) {
 					};
 
 					for (const key in this.props) {
-						if (this.props.hasOwnProperty(key) && key.startsWith(SUB_PROPS_PREFIX)) {
+						if (Object.prototype.hasOwnProperty.call(this.props, key) && key.startsWith(SUB_PROPS_PREFIX)) {
 							const k = key.substr(SUB_PROPS_LEN);
 							const val = this.props[key];
 							source.set(k, val);

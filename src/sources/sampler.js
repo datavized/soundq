@@ -25,7 +25,7 @@ export default function samplerSourceFactory(bufferTable) {
 
 	const bufferDefs = new Map();
 	for (const k in bufferTable) {
-		if (bufferTable.hasOwnProperty(k)) {
+		if (Object.prototype.hasOwnProperty.call(bufferTable, k)) {
 			bufferDefs.set(parseFloat(k), bufferSource(bufferTable[k]));
 		}
 	}

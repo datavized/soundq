@@ -224,7 +224,7 @@ function SoundQ(options = {}) {
 		let untilTime = earliestStopTime + minLookAhead;
 		const liveShotsCopy = new Set(liveShots.values());
 		while (liveShotsCopy.size) {
-			liveShotsCopy.forEach(shot => {
+			for (const shot of liveShotsCopy) {
 				const { source } = shot;
 
 				let event = null;
@@ -242,7 +242,7 @@ function SoundQ(options = {}) {
 				if (!event) {
 					liveShotsCopy.delete(shot);
 				}
-			});
+			}
 		}
 		/*
 		todo: loop through any started sound events
@@ -654,7 +654,7 @@ function SoundQ(options = {}) {
 				source.props = shotInfo.props;
 
 				for (const key in source.props) {
-					if (source.props.hasOwnProperty(key)) {
+					if (Object.prototype.hasOwnProperty.call(source.props, key)) {
 						source.set(key, source.props[key]);
 					}
 				}
@@ -723,7 +723,7 @@ function SoundQ(options = {}) {
 					Object.assign(props, key);
 					if (id) {
 						for (const k in key) {
-							if (key.hasOwnProperty(k)) {
+							if (Object.prototype.hasOwnProperty.call(key, k)) {
 								publicShot.set(id, k, key[k]);
 							}
 						}
