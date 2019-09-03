@@ -1,8 +1,8 @@
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 import repeater from '../src/sources/repeater';
-
-document.body.insertAdjacentHTML('beforeend', require('./repeater.html'));
+import html from './repeater.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const soundQ = new SoundQ({
 	cacheExpiration: 2

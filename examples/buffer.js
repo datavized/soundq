@@ -1,8 +1,8 @@
 import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
-
-document.body.insertAdjacentHTML('beforeend', require('./buffer.html'));
+import html from './buffer.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const soundQ = new SoundQ({
 	// maxLiveSounds: 20

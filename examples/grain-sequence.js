@@ -10,6 +10,8 @@ import trapezoid from '../src/patches/trapezoid';
 
 import { Knob } from 'uil/src/proto/Knob';
 import dragDrop from './util/drag-drop';
+import html from './grain-sequence.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 let seed = 9876;
 function random() {
@@ -18,7 +20,6 @@ function random() {
 }
 
 document.title = 'Granular Synthesis Sequence';
-document.body.insertAdjacentHTML('beforeend', require('./grain-sequence.html'));
 
 const audioContext = new AudioContext();
 // const envelopeGrain = compose([grain, gainEnvelope]);

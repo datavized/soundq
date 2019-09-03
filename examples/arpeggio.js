@@ -4,13 +4,13 @@ import oscillator from '../src/sources/oscillator';
 import gainEnvelope from '../src/patches/gainEnvelope';
 import repeater from '../src/sources/repeater';
 import { getKeyNoteFrequency, keys, modes } from '../src/util/scales';
+import html from './arpeggio.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const interval = 0.4;
 const duration = 0.4;
 
 const notes = [0, 1, 2, 3, 4, 3, 2, 1];
-
-document.body.insertAdjacentHTML('beforeend', require('./arpeggio.html'));
 
 const modeSelect = document.getElementById('mode');
 const keySelect = document.getElementById('key');

@@ -9,8 +9,8 @@ import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import bufferSource from '../src/sources/buffer';
 import gainEnvelope from '../src/patches/gainEnvelope';
-
-document.body.insertAdjacentHTML('beforeend', require('./envelope.html'));
+import html from './envelope.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const audioContext = new AudioContext();
 

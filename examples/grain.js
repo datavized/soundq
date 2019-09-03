@@ -14,8 +14,9 @@ import { Knob } from 'uil/src/proto/Knob';
 import WavEncoder from 'wav-encoder';
 const encodeSync = WavEncoder.encode.sync;
 
+import html from './grain.html';
+document.body.insertAdjacentHTML('beforeend', html);
 document.title = 'Granular Synthesis';
-document.body.insertAdjacentHTML('beforeend', require('./grain.html'));
 
 const startButton = document.getElementById('start');
 const stopButton = document.getElementById('stop');

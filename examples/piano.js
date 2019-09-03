@@ -3,8 +3,8 @@ import SoundQ from '../src/index';
 import samplerSource from '../src/sources/sampler';
 import gainEnvelope from '../src/patches/gainEnvelope';
 import { getNoteMidi, keys } from '../src/util/scales';
-
-document.body.insertAdjacentHTML('beforeend', require('./piano.html'));
+import html from './piano.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const soundQ = new SoundQ({
 	// maxLiveSounds: 20,

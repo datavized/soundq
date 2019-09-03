@@ -4,6 +4,8 @@ import oscillator from '../src/sources/oscillator';
 import gainEnvelope from '../src/patches/gainEnvelope';
 import repeater from '../src/sources/repeater';
 import { getKeyNoteFrequency, keys, modes } from '../src/util/scales';
+import html from './data-synth.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const interval = 0.4;
 const duration = 0.4;
@@ -52,7 +54,6 @@ function getRowIndex(time) {
 	return Math.round(time / interval) % data.length;
 }
 
-document.body.insertAdjacentHTML('beforeend', require('./data-synth.html'));
 const tableBody = document.getElementById('tableBody');
 data.forEach(row => {
 	const tr = document.createElement('tr');

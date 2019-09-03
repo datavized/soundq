@@ -2,8 +2,8 @@ import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import dtmf from '../src/sources/dtmf';
 import gainEnvelope from '../src/patches/gainEnvelope';
-
-document.body.insertAdjacentHTML('beforeend', require('./dtmf.html'));
+import html from './dtmf.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const soundQ = new SoundQ({
 	context: new AudioContext()

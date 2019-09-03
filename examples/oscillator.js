@@ -2,8 +2,8 @@ import { AudioContext } from 'standardized-audio-context';
 import SoundQ from '../src/index';
 import oscillator from '../src/sources/oscillator';
 import gainEnvelope from '../src/patches/gainEnvelope';
-
-document.body.insertAdjacentHTML('beforeend', require('./oscillator.html'));
+import html from './oscillator.html';
+document.body.insertAdjacentHTML('beforeend', html);
 
 const soundQ = new SoundQ({
 	cacheExpiration: 2,
